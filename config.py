@@ -48,11 +48,11 @@ chunk_overlap = 128
 db_path = "./chroma_db"
 
 # gemini api key 
-GOOGLE_API_KEY = "AIzaSyBgKE09ReHYbG2lqC_YmdsbEjF8yQGWrGM"
+GOOGLE_API_KEY = "your GOOGLE_API_KEY"
 #gemini api key的申请地址：https://makersuite.google.com/app/prompts/new_freeform ，条件：拥有google帐号
 
 # 通义千问 api key
-DASHSCOPE_API_KEY  = "sk-7d48078fa897417c9cfa5cfa70d95f9a"
+DASHSCOPE_API_KEY  = "your DASHSCOPE_API_KEY"
 
 # 附赠我的 gemini 聊天 API：
 GMI_SERVER = 'http://107.175.206.30:5001/chat'
