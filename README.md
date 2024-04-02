@@ -8,6 +8,7 @@
 ![切换聊天](images/切换聊天.png)
 ![我的文档命令](images/我的文档命令.png)
 ## 怎样使用
+### [安装vs_BuildTools]https://aka.ms/vs/17/release/vs_BuildTools.exe
 ### 安装环境
 - 推荐使用conda环境安装部署，首先你得安装好conda环境
 ```bash

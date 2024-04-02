@@ -2,24 +2,20 @@ import threading
 import websocket
 import json
 from config import ws_url
-
 from dal import *
 
 def on_message(ws, message):
     # 处理收到的消息
-    #print("Received message:", message)
-    # 解析消息
+    # print("Received message:", message)
     data = json.loads(message)
-    # 处理不同类型的事件
     if "post_type" in data:
         post_type = data["post_type"]
-        if post_type == "message":  # 私聊消息或群聊消息
+        if post_type == "message":  
             handle_message_thread(data)
-        elif post_type == "notice":  # 通知类型的事件，比如好友申请、群邀请等
+        elif post_type == "notice":  
             handle_notice_thread(data)
-        elif post_type == "request":  # 请求类型的事件，比如加好友请求、加群请求等
+        elif post_type == "request":  
             handle_request(data)
-        # 其他类型的事件可以继续添加处理逻辑
     else:
         print("Unknown message format:", message)
 
@@ -47,16 +43,21 @@ def on_error(ws, error):
     print("Error:", error)
 
 def on_close(ws):
+    # 连接关闭时重新连接
     print("Connection closed")
+    ws.run_forever()
 
 def on_open(ws):
     print("Connection established")
 
+# 设置自动重连
+def create_connection():
+    ws = websocket.WebSocketApp(ws_url,
+                                on_message=on_message,
+                                on_error=on_error,
+                                on_close=on_close)
+    ws.on_open = on_open
+    ws.run_forever()
+
 # 建立 WebSocket 连接
-ws_url = ws_url
-ws = websocket.WebSocketApp(ws_url,
-                            on_message=on_message,
-                            on_error=on_error,
-                            on_close=on_close)
-ws.on_open = on_open
-ws.run_forever()
+create_connection()
