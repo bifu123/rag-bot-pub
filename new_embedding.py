@@ -16,6 +16,9 @@ from sqlite_helper import *
 
 import time
 
+# 异步函数
+import asyncio
+
 
 
 
@@ -169,5 +172,5 @@ except Exception as e:
 
 
 
-answer_action(chat_type, user_id, group_id, at, response_message)
+asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
 

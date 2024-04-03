@@ -1,8 +1,8 @@
 # 机器人 QQ 号
-bot_qq = "3152246598"
+bot_qq = "564523222"
 
 # 管理员 QQ 号
-admin_qq = "415135222"
+admin_qq = "85245222"
 
 # 允许的聊天回复
 chat_type_allow = [
@@ -26,7 +26,8 @@ allowed_extensions = [
     ".md",
     ".html",
     ".txt",
-    ".htm"
+    ".htm",
+    ".py"
 ]
 
 # go-cqhttp Websocket 监听地址
@@ -43,6 +44,9 @@ chunk_size = 800
 
 # 分割文档时连续部分的重叠区大小
 chunk_overlap = 128
+
+# 保存聊天记录的大小
+chat_history_size_set = 1024 # 记录越大，每次发给大模型分析的数据越多，上下文越全面。但是会增加响应的时间，而且随着话题的多样复杂，会降低大模型分析的精准度
 
 # 量化后数据保存路径
 db_path = "./chroma_db"
@@ -75,19 +79,19 @@ llm_ollama_conf = {
 ## 线上google gemini语言模型
 llm_gemini_conf = {
     "model": "gemini-pro",
-    "temperature": 0.2
+    "temperature": 0.7
 } 
 ## 线上 通义千问 语言模型
 llm_tongyi_conf = {
-    "model_name": "qwen-max-longcontext", # qwen-max-longcontext | qwen-max
-    "temperature": 0.2,
+    "model_name": "qwen-max", # qwen-max-longcontext | qwen-max
+    "temperature": 0.7,
     "streaming": False
 } 
 
 # 模型选择
 model_choice = {
     "embedding":"ollama", # embedding: ollama | google
-    "llm": "tongyi" # llm: ollama | gemini | tongyi
+    "llm": "ollama" # llm: ollama | gemini | tongyi
 }
 
 

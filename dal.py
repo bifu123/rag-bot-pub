@@ -36,6 +36,10 @@ from bs4 import BeautifulSoup
 
 from pathlib import Path
 
+# 异步函数
+import asyncio
+import aiohttp
+
 
 
 
@@ -178,9 +182,9 @@ def message_action(data):
                     else:
                         response_message = "以下是你的知识库文档：\n\n" + files_str + "\n\n如果要删除，请输使用删除命令： /删除文档|完整路径的文件名"
                 else:
-                    response_message = "你还没有文档，请先给我发送你的文档"
+                    response_message = "你还没有文档，请先给我发送你的文档。（必须在【文档问答】或者【知识库问答】状态下，我才会保存）"
             except:
-                response_message = "你还没有文档，请先给我发送你的文档"
+                response_message = "你还没有文档，请先给我发送你的文档。（必须在【文档问答】或者【知识库问答】状态下，我才会保存）"
 
         # 命令： /删除文档 
         elif command_name in ("/删除文档", f"{at_string} /删除文档"):
@@ -243,7 +247,7 @@ def message_action(data):
         elif command_name in ("/开启群消息", f"{at_string} /开启群消息"):
             try:
                 switch_allow_state(str(data["group_id"]), "on")
-                response_message = "群消息已经开启"
+                response_message = "现在不管谁说话，我都会在群里回答，如果嫌小的话多，你就发 /关闭群消息"
             except Exception as e:
                 response_message = f"群消息开启失败：{e}"
 
@@ -251,7 +255,7 @@ def message_action(data):
         elif command_name in ("/关闭群消息", f"{at_string} /关闭群消息"):
             try:
                 switch_allow_state(str(data["group_id"]), "off")
-                response_message = "群消息已经关闭"
+                response_message = "好的，小的先行告退，就不插嘴各位大人的聊天了，有需要时@我"
             except Exception as e:
                 response_message = f"群消息关闭失败：{e}"
 
@@ -272,43 +276,64 @@ def message_action(data):
             # 当状态为文档问答
             if current_state == "知识库问答":
                 # 调用RAG
-                print(f"调用 {embedding_db_path} 进行文档问答...")
+                print(f"加载 {embedding_db_path} 的所有文档，进行知识库问答...")
                 retriever = load_retriever(embedding_db_path, embedding)
                 # 准备问题
                 query = data["message"]
                 # 执行问答
-                response_message = run_chain(retriever, source_id, query, current_state)
+                response_message = asyncio.run(run_chain(retriever, source_id, query, current_state))
                 #retriever.delete_collection()
 
             # 文档问答。文档未经过分割向量化，直接发给LLM推理
             elif current_state == "文档问答":
-                # 调用 GEMIN 接口
                 question = data["message"].replace(at_string, "")
                 command = f"start cmd /c \"conda activate rag-bot && python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
-                # 使用 os.system() 执行命令
                 os.system(command)
                 response_message = ""
 
             # 聊天。
             else:
                 query = f'{data["message"]}'
-                response_message = chat_generic_langchain(source_id, query, current_state)
+                response_message = asyncio.run(chat_generic_langchain(source_id, query, current_state))
 
         
         # 发送消息
         print("="*40, "\n",f"答案：{response_message}")    
         try: 
-            answer_action(chat_type, user_id, group_id, at, response_message)
+            asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
+            # answer_action(chat_type, user_id, group_id, at, response_message)
         except Exception as e:
             print("="*40, "\n",f"发送消息错误：{e}")
 
 
 #**************** 事件处理 ********************************************
 def event_action(data):
-    # 接收文件
+    # 判断事件类型
     notice_type = data["notice_type"]
-    user_id = str(data["user_id"])
-    # 如果消息提醒是群文件和离线文件
+
+    # 获取当前群允许的聊天类型
+    chat_type_allow = get_allow_state(data)
+    print("="*40, "\n","当前允许的聊天消息类型：", chat_type_allow)
+
+    # 判断聊天类型、获得必要参数（函数在send.py中）
+    chat_type = get_chat_type(data)["chatType"]
+    at = get_chat_type(data)["at"]
+    user_id = get_chat_type(data)["user_id"]
+    group_id = get_chat_type(data)["group_id"]
+    current_state = get_user_state(user_id) # 先检查用户状态
+
+    if chat_type in ("group_at", "group"):
+        source_id = group_id
+    elif chat_type == "private":
+        source_id = user_id
+    else:
+        source_id = user_id
+  
+    print("="*40)
+    print(f"chat_type:{chat_type}\nat:{at}\nuser_id:{user_id}\ngroup_id:{group_id}\nsource_id:{source_id}\ncurrent_state:{current_state}")
+   
+
+    # 如果消息提醒是群文件和离线文件，下载后返回下载成功消息
     if notice_type in ("offline_file", "group_upload"):
         file_name = data["file"]["name"]
         file_size = data["file"]["size"]
@@ -319,156 +344,25 @@ def event_action(data):
         except:
             # 用户文件路径名
             user_data_path = os.path.join(data_path, user_id)
-        # 下载文件到用户目录
         
-        response = download_file(file_url, file_name, user_data_path, allowed_extensions=allowed_extensions)
-        # 定义一个处理提醒的反馈消息
-        '''
-        =============== Notice ===============
-        {'post_type': 'notice', 'notice_type': 'offline_file', 'time': 1711607647, 'self_id': 1878085037, 'user_id': 415135222, 'file': {'name': 'tesla_p40.pdf', 'size': 106509, 'url': 'http://39.145.24.22/ftn_handler/5ad5075ff13463bc2cc7a6b2c8f8621bd15efb11953c58279f7830ae738fdb359f3cf19371d2b137843433fa5a71584023888c1f822a7962714c6f80268ab792'}}
+        # 启动文件解读
+        if current_state == "聊天":
+            file_path_temp = f"{user_data_path}_chat_temp_{user_id}"
+            response_message = download_file(file_url, file_name, file_path_temp, allowed_extensions=allowed_extensions)
+            question = "请进行解读，并输出一个总结"
+            command = f"start cmd /c \"conda activate rag-bot && python docs_chat.py {file_path_temp} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
+            os.system(command)
+            response_message = ""
+        else:
+            response_message = download_file(file_url, file_name, user_data_path, allowed_extensions=allowed_extensions)
 
-        =============== Notice ===============
-        {'post_type': 'notice', 'notice_type': 'group_upload', 'time': 1711608029, 'self_id': 1878085037, 'group_id': 499436648, 'user_id': 415135222, 'file': {'busid': 102, 'id': '/df9c709b-be79-4765-8d94-e1e1f2b13727', 'name': 'tesla_p40.pdf', 'size': 106509, 'url': 'http://223.109.208.144/ftn_handler/226e5a1946afd217ffcf5bee0f759dc6654d1dfc89512a268be65828a5aa23f7647bfbfb928a106f6d7de6321fd87743352758c00e9f518feb325812044651cf/?fname=2f64663963373039622d626537392d343736352d386439342d653165316632623133373237'}}
-
-
-        =============== 批准入群 ==============
-        {'post_type': 'notice', 'notice_type': 'group_increase', 'time': 1711826628, 'self_id': 3152246598, 'sub_type': 'approve', 'group_id': 222302526, 'operator_id': 0, 'user_id': 990154420}
-
-
-        '''
-    
     # 如果不包含文件的提醒
     else:
-        response = "other notice"
+        response_message = "other notice"
     
     print("*" * 40)
-    print(response)
-
+    print(response_message)
 
     # 发送消息
-    if data["notice_type"] == "offline_file": # 群文档
-        url = http_url + "/send_private_msg"
-        params = {
-            "user_id": user_id, 
-            "message": response
-        } 
-    elif data["notice_type"] == "group_upload": # 私人文档
-        url = http_url + "/send_group_msg"
-        params = {
-            "group_id": str(data["group_id"]),
-            "message": f"{at_string} " + response
-            } 
-        
-    else:
-        url = http_url + "/send_private_msg"
-        params = {
-            "user_id": user_id, 
-            "message": "未知提醒类型，请联系管理员"
-        }
-  
-    response = requests.post(url, params=params)  
-
+    asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
     
-
-# 生成站点地图的函数
-URL = 'http://cho.freesky.sbs'
-def build_sitemap(url):
-    '''所有url列表'''
-    URL_LIST = {}
-
-    '''模拟header'''
-    HEADER = {
-        'Cookie': 'AD_RS_COOKIE=20080917',
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) \ AppleWeb\Kit/537.36 (KHTML, like Gecko)\ '
-                      'Chrome/58.0.3029.110 Safari/537.36'}
-
-    def get_http(url, headers=None, charset='utf8'):
-        """
-        发送请求
-        :param url:
-        :param headers:
-        :param charset:
-        :return:
-        """
-        if headers is None:
-            headers = {}
-        try:
-            return request.urlopen(request.Request(url=url, headers=headers)).read().decode(charset)
-        except Exception:
-            pass
-        return ''
-
-    def open_url(url):
-        """
-        打开链接，并返回该链接下的所有链接
-        :param url:
-        :return:
-        """
-        soup = BeautifulSoup(get_http(url=url, headers=HEADER), 'html.parser')
-
-        all_a = soup.find_all('a')
-        url_list = {}
-        for a_i in all_a:
-            href = a_i.get('href')
-            if href is not None and foreign_chain(href):
-                url_list[href] = href
-                URL_LIST[href] = href
-        return url_list
-
-    def foreign_chain(url):
-        """
-        验证是否是外链
-        :param url:
-        :return:
-        """
-        return url.find(URL) == 0
-
-    '''首页'''
-    home_all_url = open_url(URL)
-
-    '''循环首页下的所有链接'''
-    if isinstance(home_all_url, dict):
-        # 循环首页下的所有链接
-        for home_url in home_all_url:
-            # 验证是否是本站域名
-            if foreign_chain(home_url) is True:
-                open_url(home_url)
-
-    URL_LIST_COPY = URL_LIST.copy()
-
-    for copy_i in URL_LIST_COPY:
-        open_url(copy_i)
-
-    # 创建文件
-    doc = xml.dom.minidom.Document()
-    root = doc.createElement('urlset')
-    # 设置根节点的属性
-    root.setAttribute('xmlns:xsi', 'http://www.w3.org/2001/XMLSchema-instance')
-    root.setAttribute('xmlns', 'http://www.sitemaps.org/schemas/sitemap/0.9')
-    root.setAttribute('xsi:schemaLocation', 'http://www.sitemaps.org/schemas/sitemap/0.9 '
-                                             'http://www.sitemaps.org/schemas/sitemap/0.9/sitemap.xsd')
-    doc.appendChild(root)
-
-    for url_list_i in URL_LIST:
-        nodeUrl = doc.createElement('url')
-        nodeLoc = doc.createElement('loc')
-        nodeLoc.appendChild(doc.createTextNode(str(url_list_i)))
-        nodeLastmod = doc.createElement("lastmod")
-        nodeLastmod.appendChild(doc.createTextNode(str(datetime.datetime.now().date())))
-        nodePriority = doc.createElement("priority")
-        nodePriority.appendChild(doc.createTextNode('1.0'))
-        nodeUrl.appendChild(nodeLoc)
-        nodeUrl.appendChild(nodeLastmod)
-        nodeUrl.appendChild(nodePriority)
-        root.appendChild(nodeUrl)
-
-    with open('sitemap.xml', 'w', encoding="utf-8") as fp:
-        doc.writexml(fp, indent='\t', addindent='\t', newl='\n')
-
-    return {"url":url, "sitemap":"./sitemap.xml"}
-
-# # 调用函数并输出结果
-# print(build_sitemap(URL))
-
-
-

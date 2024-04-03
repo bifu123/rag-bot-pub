@@ -28,6 +28,9 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.schema.output_parser import StrOutputParser
 
+# 异步函数
+import asyncio
+
 
 
 
@@ -82,7 +85,7 @@ else:
 
 ############################# 模型方法 #################################
 # gemini 聊天
-def chat_gemini(wxid, content, GMI_SERVER_URL):
+async def chat_gemini(wxid, content, GMI_SERVER_URL):
     print("*" * 40)
     print("正在向llm提交...")
     try:
@@ -107,9 +110,8 @@ def get_chat_history(data) -> list:
         print(f"以前聊天记录：{res}")
     return res
 
-
 # 处理聊天记录
-def do_chat_history(chat_history, source_id, query, answer, user_state):
+async def do_chat_history(chat_history, source_id, query, answer, user_state):
     # 插入当前数据表 source_id、query、result
     insert_chat_history(source_id, query, answer, user_state)
     # 将聊天记录入旧归档记录表history_old.xlsx表中
@@ -118,13 +120,13 @@ def do_chat_history(chat_history, source_id, query, answer, user_state):
     history_size_now = sys.getsizeof(f"{chat_history}")
     print("*" * 50)
     print(f"当前聊天记录大小：{history_size_now}")
-    # 如果超过2048字节，就删除数据库中时间最旧的两条记录
-    if history_size_now > 2048:
+    # 如果超过预定字节大小，就删除数据库中时间最旧的两条记录
+    if history_size_now > chat_history_size_set:
         delete_oldest_records()
         print("删除了数据库中时间最旧的两条记录")
 
 # 向量检索聊天（执行向量链）
-def run_chain(retriever, source_id, query, user_state="聊天"):
+async def run_chain(retriever, source_id, query, user_state="聊天"):
     template_cn = """请根据上下文和对话历史记录完整地回答问题:
     {context}
     {question}
@@ -147,12 +149,12 @@ def run_chain(retriever, source_id, query, user_state="聊天"):
     request = {"question": query}
     answer = chain.invoke(request)
     # 处理聊天记录 
-    do_chat_history(chat_history, source_id, query, answer, user_state)
+    await do_chat_history(chat_history, source_id, query, answer, user_state)
     # 返回结果
     return answer
 
 # 通用聊天
-def chat_generic_langchain(source_id, query, user_state="聊天"):
+async def chat_generic_langchain(source_id, query, user_state="聊天"):
     # 从数据库中提取 source_id 的聊天记录
     data = fetch_chat_history(source_id, user_state)
     chat_history = get_chat_history(data)
@@ -160,7 +162,7 @@ def chat_generic_langchain(source_id, query, user_state="聊天"):
     # try:
     # 由模板生成 prompt
     prompt = ChatPromptTemplate.from_template("""
-        你是一个热心的人，善于从对话历史记录中分析，利用你的知识为人们解答各种问题。请回答下面的问题：
+        你是一个热心的人，尽力为人们解答各种问题。请回答下面的问题：
         {chat_history}
         {question}
     """)
@@ -174,7 +176,7 @@ def chat_generic_langchain(source_id, query, user_state="聊天"):
     # 调用链进行问答
     response_message = f"{chain.invoke(query)}"
     # 处理聊天记录 
-    do_chat_history(chat_history, source_id, query, response_message, user_state)
+    await do_chat_history(chat_history, source_id, query, response_message, user_state)
     # except Exception as e:
     #     response_message = f"通用聊天 chat_generic_langchain 错误：{e}"
         
