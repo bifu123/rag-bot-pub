@@ -163,24 +163,30 @@ def message_action(data):
         source_id = group_id
         embedding_data_path = os.path.join(data_path, "group_"+ group_id)
         embedding_db_path_tmp = os.path.join(db_path, "group_"+ group_id)
+        embedding_db_path_tmp_site = os.path.join(db_path, "group_"+ group_id + "_site")
     elif chat_type == "private":
         source_id = user_id
         embedding_data_path = user_data_path
         embedding_db_path_tmp = user_db_path
+        embedding_db_path_tmp_site = user_db_path + "_site"
 
 
     # 读取数据库当前source_id的存储路径
     if get_path_by_source_id(source_id) is None:
         insert_into_db_path(source_id, embedding_db_path_tmp) # 如果没有记录则插入
+        insert_into_db_path_site(source_id, embedding_db_path_tmp_site)
         embedding_db_path = embedding_db_path_tmp
+        embedding_db_path_site = embedding_db_path_tmp_site
     else:
         embedding_db_path = get_path_by_source_id(source_id) # 如果存在则直接使用
+        embedding_db_path_site = get_path_by_source_id_site(source_id) # 如果存在则直接使用
 
 
 
     print("="*40, "\n",f"source_id：{source_id}")     
     print("="*40, "\n",f"当前使用的文档路径：{embedding_data_path}")
     print("="*40, "\n",f"当前使用的数据库路径：{embedding_db_path}")
+    print("="*40, "\n",f"当前使用的网站向量路径：{embedding_db_path_site}")
 
     # 以 | 分割找出其中的命令
     command_parts = message.split("|")
@@ -224,16 +230,29 @@ def message_action(data):
             
         # 命令： /量化文档 
         elif command_name in ("/量化文档", f"{at_string} /量化文档"):
+            embedding_type = "file"
             try:
                 # 新开窗口量化到新目录
-                #command = f"start /wait cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at}\"" # 等待新打开的窗口执行完成
-                command = f"start cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at}\"" # 不用等待新打开的窗口执行完成
+                #command = f"start /wait cmd /c \"python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at}\"" # 等待新打开的窗口执行完成
+                command = f"start cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}\"" # 不用等待新打开的窗口执行完成
                 # 使用 os.system() 执行命令
                 os.system(command)
                 response_message = "正在量化，完成后另行通知，这期间你仍然可以使用你现在的文档知识库"
             except Exception as e:
                 response_message = f"量化失败：{e}"
-    
+
+        # 命令： /量化网站 
+        elif command_name in ("/量化网站", f"{at_string} /量化网站"):
+            embedding_type = "site"
+            site_url = base64.b64encode(json.dumps(command_parts[1]).encode()).decode()
+            try:
+                # question = "请对以上内容解读，并输出一个结论"
+                command = f"start cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}\""
+                os.system(command)
+            except Exception as e:
+                print(f"URL错误：{e}")
+            response_message = "这将需要很长、很长的时间...不过你可以问我些其它事"
+
         # 命令： /上传文档 
         elif command_name in ("/上传文档", f"{at_string} /上传文档"):
             # 取得文件名
@@ -244,6 +263,13 @@ def message_action(data):
             # 切换到 文档问答 状态
             # 用数据库保存每个用户的状态
             switch_user_state(user_id, "文档问答")
+            response_message = "你己切换到 【文档问答】 状态，如要切换为 【聊天】或【知识库问答】，请发送命令：/聊天 或 /知识库问答\n在这种模式下，你（你们）的文档目录下的所有文档不会被分割向量化，而直接发给LLM推理"   
+
+        # 命令： /网站问答 
+        elif command_name in ("/网站问答", f"{at_string} /网站问答"):
+            # 切换到 文档问答 状态
+            # 用数据库保存每个用户的状态
+            switch_user_state(user_id, "网站问答")
             response_message = "你己切换到 【文档问答】 状态，如要切换为 【聊天】或【知识库问答】，请发送命令：/聊天 或 /知识库问答\n在这种模式下，你（你们）的文档目录下的所有文档不会被分割向量化，而直接发给LLM推理"   
 
         # 命令： /知识库问答 
@@ -293,19 +319,29 @@ def message_action(data):
 
         # 和 LLM 对话
         else:
-            # 知识库问答，文档经过分割向量化
             current_state = get_user_state(user_id) # 先检查用户状态
             print(f"当前状态：{current_state}")
             # 当状态为文档问答
             if current_state == "知识库问答":
                 # 调用RAG
-                print(f"加载 {embedding_db_path} 的所有文档，进行知识库问答...")
+                print(f"加载 {embedding_db_path} 的向量知识库...")
                 retriever = load_retriever(embedding_db_path, embedding)
                 # 准备问题
                 query = data["message"]
                 # 执行问答
                 response_message = asyncio.run(run_chain(retriever, source_id, query, current_state))
                 #retriever.delete_collection()
+
+             # 当状态为网站问答
+            if current_state == "网站问答":
+                # 调用RAG
+                print(f"加载 {embedding_db_path_site} 的向量知识库...")
+                retriever = load_retriever(embedding_db_path_site, embedding)
+                # 准备问题
+                query = data["message"]
+                # 执行问答
+                response_message = asyncio.run(run_chain(retriever, source_id, query, current_state))
+                #retriever.delete_collection()           
 
             # 文档问答。文档未经过分割向量化，直接发给LLM推理
             elif current_state == "文档问答":
@@ -328,7 +364,6 @@ def message_action(data):
             else:
                 query = f'{data["message"]}'
                 response_message = asyncio.run(chat_generic_langchain(source_id, query, current_state))
-
         
         # 发送消息
         print("="*40, "\n",f"答案：{response_message}")    

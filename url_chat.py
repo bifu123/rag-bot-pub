@@ -212,27 +212,11 @@ def get_loaders_from_sitemap(sitemap_path):
     documents = UnstructuredURLLoader(urls=urls)
     return documents
 
-# # 单页加载
-# def get_loader(url):
-#     loader = WebBaseLoader(url)
-#     document = loader.load()
-#     return document
-
-# # # 远程站点地图加载网页
-# # loader = SitemapLoader(
-# #     "http://cho.freesky.sbs/sitemap.xml",
-# #     filter_urls=["https://typecho.work/archives/"]
-# # )
-# # documents = loader.load()
-# # print(len(documents))
-# # print(documents)
-
-
-
+# 加载内容
 loader = get_loaders(decode_urls)
 print(loader)
 
-
+# 调用通用gemini聊天得出答案
 # # wxid = user_id
 # # content = f"{load_documents(embedding_data_path)}\n{question}"
 # # GMI_SERVER_URL = f'{GMI_SERVER}?wxid={wxid}&content={content}'
@@ -253,15 +237,12 @@ print(loader)
 # # print(f"答案： {response_message}")
 
 
-
-
 # 调用通用聊天得出答案
 try:
     query = f"{loader}\n{question}"
     response_message = asyncio.run(chat_generic_langchain(source_id, query, user_state))
 except Exception as e:
     response_message = f"错误：{e}"
-
 
 
 # 打印答案，发送消息

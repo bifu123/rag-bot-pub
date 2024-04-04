@@ -42,6 +42,7 @@ def create_tables(connection):
     # 创建路径表
     cursor.execute('''CREATE TABLE IF NOT EXISTS db_path (
                       source_id TEXT PRIMARY KEY,
+                      path_site TEXT,
                       path TEXT)''')
     # 创建当前聊天历史记录表
     cursor.execute('''CREATE TABLE IF NOT EXISTS history_now (
@@ -119,6 +120,15 @@ def insert_into_db_path(source_id, path):
                           VALUES (?, ?)''', (source_id, path))
         conn.commit()
 
+# 函数用于插入记录到db_path表
+def insert_into_db_path_site(source_id, path):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        cursor.execute('''INSERT OR REPLACE INTO db_path (source_id, path_site)
+                          VALUES (?, ?)''', (source_id, path))
+        conn.commit()
+
 # 函数用于更新数据表db_path中source_id的值
 def update_db_path(source_id, new_path):
     with db_lock:
@@ -133,6 +143,26 @@ def get_path_by_source_id(source_id):
         conn = get_database_connection()
         cursor = conn.cursor()
         cursor.execute('''SELECT path FROM db_path WHERE source_id = ?''', (source_id,))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        else:
+            return None
+        
+# 函数用于更新网站路径
+def update_db_path_site(source_id, new_path):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        cursor.execute('''UPDATE db_path SET path_site = ? WHERE source_id = ?''', (new_path, source_id))
+        conn.commit()
+
+# 函数用于获取网站路径
+def get_path_by_source_id_site(source_id):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        cursor.execute('''SELECT path_site FROM db_path WHERE source_id = ?''', (source_id,))
         result = cursor.fetchone()
         if result:
             return result[0]
