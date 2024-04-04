@@ -4,6 +4,8 @@ import shutil
 import json
 import sys
 from sys import argv
+import re
+import base64
 
 # 从文件导入
 from models_load import *
@@ -113,6 +115,24 @@ def get_allow_state(data):
         chat_type_allow = ["private", "group_at"]
     return chat_type_allow
 
+# 匹配URL的函数
+def get_urls(text):
+    # 定义一个正则表达式模式，用于匹配URL
+    url_pattern = r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+/\S*'
+    # 使用findall函数查找文本中所有匹配的URL
+    urls = re.findall(url_pattern, text)
+    # 如果找到了URL，则返回True，否则返回False
+    if urls:
+        # # 打印找到的所有URL
+        # for url in urls:
+        #     print(url)
+        # 将URL列表编码为BASE64字符串
+        encoded_urls = base64.b64encode(json.dumps(urls).encode()).decode()   
+        return "yes", encoded_urls
+    else:
+        print("未找到任何URL。")
+        return "no", "nourl"
+
 #**************** 消息处理 ********************************************
 def message_action(data):
 
@@ -166,7 +186,10 @@ def message_action(data):
     command_parts = message.split("|")
     command_name = command_parts[0]
 
-    print("="*40, "\n",f"当前命令：{command_name}")   
+    print("="*40, "\n",f"当前命令：{command_name}") 
+
+
+
 
     # 在允许回复的聊天类型中处理
     if chat_type in chat_type_allow:
@@ -289,6 +312,16 @@ def message_action(data):
                 question = data["message"].replace(at_string, "")
                 command = f"start cmd /c \"conda activate rag-bot && python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
                 os.system(command)
+                response_message = ""
+
+            # 如果字符中包含URL，则启动URL解读
+            elif get_urls(message)[0] == "yes":
+                try:
+                    question = "请对以上内容解读，并输出一个结论"
+                    command = f"start cmd /c \"conda activate rag-bot && python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
+                    os.system(command)
+                except Exception as e:
+                    print(f"URL错误：{e}")
                 response_message = ""
 
             # 聊天。

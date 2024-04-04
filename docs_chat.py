@@ -33,6 +33,7 @@ user_state = str(sys.argv[8])
 
 
 
+
 print("*" * 40)
 
 print(f"embedding_data_path:", embedding_data_path)
@@ -43,6 +44,7 @@ print(f"group_id:", group_id)
 print(f"at:", at)
 print(f"source_id:", source_id)
 print(f"user_state:", user_state)
+
 
 
 print("*" * 40)
@@ -56,6 +58,8 @@ def load_documents(data_path):
     loaders = loader.load()
     print(loaders)
     return loaders
+
+
 
 # 清除原来的聊天历史
 delete_all_records(source_id, user_state)

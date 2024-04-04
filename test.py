@@ -1,76 +1,34 @@
-import asyncio
-import websockets
+import base64
 import json
-from aiohttp import web
+import re
 
-async def websocket_handler(websocket, path):
-    data = {
-        "post_type": "message",
-        "message_type": "private",
-        "time": 1712140345,
-        "self_id": 3152246598,
-        "sub_type": "friend",
-        "raw_message": "hello",
-        "font": 0,
-        "sender": {
-            "age": 0,
-            "nickname": "不知道是谁",
-            "sex": "unknown",
-            "user_id": 415135222
-        },
-        "message_id": -1518347102,
-        "user_id": 415135222,
-        "target_id": 3152246598,
-        "message": "张三考了多少分"
-    }
-    await websocket.send(json.dumps(data))
+def get_urls(text):
+    # 定义一个正则表达式模式，用于匹配URL
+    url_pattern = r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+'
+    # 使用findall函数查找文本中所有匹配的URL
+    urls = re.findall(url_pattern, text)
+    # 如果找到了URL，则返回True，否则返回False
+    if urls:
+        # 打印找到的所有URL
+        for url in urls:
+            print(url)
+            # 将URL列表编码为BASE64字符串
+        encoded_urls = base64.b64encode(json.dumps(urls).encode()).decode()   
+        return "yes", encoded_urls
+    else:
+        print("未找到任何URL。")
+        return "no", "nourl"
 
-async def http_handler(request):
-    print("Received HTTP request:", request.method, request.path)
-    return web.Response(text="Hello, world!")
+# 要处理的文本
+text = "百度搜索https://zwfw.guizhou.gov.cn/bsznindex.do?otheritemcode=11520000009390359W252201102600001&orgcode=-7353064029638146384&areacode=520000。可以搜索很多东西"
 
-async def send_private_msg(request):
-    data = {}
-    try:
-        data = await request.json()
-        print("Received POST request at /send_private_msg:", data)
-        
-        # 获取查询参数
-        user_id = request.query.get('user_id', '')
-        message = request.query.get('message', '')
-        print(f"User ID: {user_id}, Message: {message}")
-        
-        return web.Response(text="OK")
-    except json.JSONDecodeError as e:
-        print("Error decoding JSON:", e)
-        return web.Response(text="Error decoding JSON")
+# 调用get_urls函数并获取结果
+matched, urls = get_urls(text)
 
-async def main():
-    websocket_server = await websockets.serve(websocket_handler, "0.0.0.0", 25522)
-    print("WebSocket server running on 0.0.0.0:25522")
-    
-    http_app = web.Application()
-    http_app.router.add_route('GET', '/', http_handler)
-    http_app.router.add_route('POST', '/send_private_msg', send_private_msg)
-    http_runner = web.AppRunner(http_app)
-    await http_runner.setup()
-    http_site = web.TCPSite(http_runner, "0.0.0.0", 25533)
-    print("HTTP server running on 0.0.0.0:25533")
-    await http_site.start()
-    
-    while True:
-        await asyncio.sleep(3600)
+# 将URL列表编码为BASE64字符串
+encoded_urls = base64.b64encode(json.dumps(urls).encode()).decode()
+print("BASE64编码后的URL字符串:", encoded_urls)
 
-asyncio.run(main())
-
-
-
-
-# 发送方发送是这样的：
-# url = "http://127.0.0.1:25533/send_private_msg"
-# params = {
-#     "user_id": "415135222", 
-#     "message": "你好"
-# } 
-
-# 在这页上怎把params获取并显示出来
+# 将BASE64编码后的字符串解码还原为URL列表
+decoded_urls = json.loads(base64.b64decode(encoded_urls).decode())
+print("还原后的URL列表:", decoded_urls)

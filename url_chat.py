@@ -1,17 +1,78 @@
-from langchain.document_loaders.sitemap import SitemapLoader
-from langchain_community.document_loaders import WebBaseLoader
+import os
+import sys
+from sys import argv
+import shutil
+import requests
+import json
+import time
+import base64
+import re
+
+from langchain.document_loaders.sitemap import SitemapLoader # 站点地图加载 
+from langchain_community.document_loaders import WebBaseLoader # 单个URL加载
+from langchain_community.document_loaders import UnstructuredURLLoader # 多URL列表加载
+from langchain_community.document_loaders import SeleniumURLLoader
+
 import xml.dom.minidom
 import datetime
 from urllib import request
 from bs4 import BeautifulSoup
 # 解析站点地图
 import xml.etree.ElementTree as ET
+# 从文件导入
+from send import *
+from models_load import *
 
-#!/usr/bin/python3
-# -*- coding: utf-8 -*-
+# 异步函数
+import asyncio
 
 
-URL = 'https://typecho.work'
+
+
+print(f"接收到的参数：{sys.argv}")
+
+
+encoded_urls = sys.argv[1]
+# 将BASE64编码后的字符串解码还原为URL列表
+decode_urls = json.loads(base64.b64decode(encoded_urls).decode())
+
+
+
+
+question = sys.argv[2]
+chat_type = str(sys.argv[3])
+user_id = str(sys.argv[4])
+group_id = str(sys.argv[5])
+at = str(sys.argv[6])
+source_id = str(sys.argv[7])
+user_state = str(sys.argv[8])
+
+
+
+
+print("*" * 40)
+
+print("decode_urls:", decode_urls)
+print("question:", question)
+print("chat_type:", chat_type)
+print("user_id:", user_id)
+print("group_id:", group_id)
+print("at:", at)
+print("source_id:", source_id)
+print("user_state:", user_state)
+
+
+
+
+print("*" * 40)
+
+
+
+
+
+
+# 清除原来的聊天历史
+delete_all_records(source_id, user_state)
 
 # 制作站点地图
 def build_sitemap(URL):
@@ -122,29 +183,99 @@ def parse_sitemap(xml_file):
     print(f"解析完毕：{url}")
     return urls
 
-# 多页加载，添加到总的文档
-def get_loaders(sitemap_path):
+# # url列表加载-使用UnstructuredURLLoader
+# def get_loaders(urls):
+#     documents = UnstructuredURLLoader(urls=urls)
+#     loaders = documents.load()
+#     return documents
+
+# url列表加载-使用SeleniumURLLoader
+def get_loaders(urls):
+    documents = SeleniumURLLoader(urls)
+    loaders = documents.load()
+    return loaders
+
+
+# # url列表加载-使用WebBaseLoader
+# def get_loaders(urls):
+#     documents = []
+#     for url in urls:
+#         print(f"正在加载：{url}")
+#         loader = WebBaseLoader(url)
+#         document = loader.load()
+#         documents.append(document[0])
+#     return documents
+
+# 站点地图加载
+def get_loaders_from_sitemap(sitemap_path):
     urls = parse_sitemap(sitemap_path)
-    documents = []
-    for url in urls:
-        print(f"正在加载：{url}")
-        loader = WebBaseLoader(url)
-        document = loader.load()
-        documents.append(document[0])
-        # print(documents)
+    documents = UnstructuredURLLoader(urls=urls)
     return documents
 
-# 单页加载
-def get_loader(url):
-    loader = WebBaseLoader(url)
-    document = loader.load()
-    return document
+# # 单页加载
+# def get_loader(url):
+#     loader = WebBaseLoader(url)
+#     document = loader.load()
+#     return document
 
-# # 根据站点地图加载网页
-# loader = SitemapLoader(
-#     "http://cho.freesky.sbs/sitemap.xml",
-#     filter_urls=["https://typecho.work/archives/"]
-# )
-# documents = loader.load()
-# print(len(documents))
-# print(documents)
+# # # 远程站点地图加载网页
+# # loader = SitemapLoader(
+# #     "http://cho.freesky.sbs/sitemap.xml",
+# #     filter_urls=["https://typecho.work/archives/"]
+# # )
+# # documents = loader.load()
+# # print(len(documents))
+# # print(documents)
+
+
+
+loader = get_loaders(decode_urls)
+print(loader)
+
+
+# # wxid = user_id
+# # content = f"{load_documents(embedding_data_path)}\n{question}"
+# # GMI_SERVER_URL = f'{GMI_SERVER}?wxid={wxid}&content={content}'
+
+# # print("*" * 40)
+# # print("正在向llm提交...")
+
+# # try:
+# #     response_text = requests.get(GMI_SERVER_URL).text
+# #     json_response = json.loads(response_text)
+# #     reply = json_response.get('reply')
+# #     print("="*40, "\n",type(reply), reply)
+# #     response_message = reply
+# # except Exception as e:
+# #     response_message = "LLM响应错误"
+
+# # print("*" * 40)
+# # print(f"答案： {response_message}")
+
+
+
+
+# 调用通用聊天得出答案
+try:
+    query = f"{loader}\n{question}"
+    response_message = asyncio.run(chat_generic_langchain(source_id, query, user_state))
+except Exception as e:
+    response_message = f"错误：{e}"
+
+
+
+# 打印答案，发送消息
+print("*" * 40)
+print(f"答案： {response_message}")
+# 发送消息
+asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
+
+
+
+
+
+
+
+
+
+
