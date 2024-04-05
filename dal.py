@@ -130,8 +130,22 @@ def get_urls(text):
         encoded_urls = base64.b64encode(json.dumps(urls).encode()).decode()   
         return "yes", encoded_urls
     else:
-        print("未找到任何URL。")
         return "no", "nourl"
+
+# 匹配图片的函数
+def get_image(text):
+    # 使用正则表达式进行匹配
+    pattern = r'\[CQ:image,file=(.*?),subType=\d+,url=(.*?)\]'
+    matches = re.findall(pattern, text)
+
+    # 如果匹配成功，返回 URL 地址和 True
+    if matches:
+        url = matches[0][1]
+        return True, url
+    else:
+        return False, None
+
+
 
 #**************** 消息处理 ********************************************
 def message_action(data):
@@ -194,7 +208,18 @@ def message_action(data):
 
     print("="*40, "\n",f"当前命令：{command_name}") 
 
-
+    matches = get_image(message)[0]
+    print("是否包含图片：", matches)
+    # 如果字符中包含URL，但不包含图片则启动URL解读
+    if get_urls(message)[0] == "yes" and matches == False:
+        current_state = get_user_state(user_id)
+        try:
+            question = "请对以上内容解读，并输出一个结论"
+            command = f"start cmd /c \"python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
+            os.system(command)
+        except Exception as e:
+            print(f"URL错误：{e}")
+        response_message = ""
 
 
     # 在允许回复的聊天类型中处理
@@ -348,16 +373,6 @@ def message_action(data):
                 question = data["message"].replace(at_string, "")
                 command = f"start cmd /c \"conda activate rag-bot && python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
                 os.system(command)
-                response_message = ""
-
-            # 如果字符中包含URL，则启动URL解读
-            elif get_urls(message)[0] == "yes":
-                try:
-                    question = "请对以上内容解读，并输出一个结论"
-                    command = f"start cmd /c \"conda activate rag-bot && python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
-                    os.system(command)
-                except Exception as e:
-                    print(f"URL错误：{e}")
                 response_message = ""
 
             # 聊天。
