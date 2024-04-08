@@ -146,7 +146,6 @@ def get_image(text):
         return False, None
 
 
-
 #**************** 消息处理 ********************************************
 def message_action(data):
 
@@ -207,15 +206,15 @@ def message_action(data):
     command_name = command_parts[0]
 
     print("="*40, "\n",f"当前命令：{command_name}") 
-
+    
     matches = get_image(message)[0]
     print("是否包含图片：", matches)
     # 如果字符中包含URL，但不包含图片则启动URL解读
     if get_urls(message)[0] == "yes" and matches == False:
         current_state = get_user_state(user_id)
         try:
-            question = "请对以上内容解读，并输出一个结论"
-            command = f"start cmd /c \"python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
+            question = "请用中文对以上内容解读，并输出一个结论"
+            command = f"startcmd /c \"conda activate rag-bot && python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
             os.system(command)
         except Exception as e:
             print(f"URL错误：{e}")
@@ -223,7 +222,7 @@ def message_action(data):
 
 
     # 在允许回复的聊天类型中处理
-    if chat_type in chat_type_allow:
+    if chat_type in chat_type_allow and get_urls(message)[0] == "no": 
         # 命令： /我的文档 
         if command_name in ("/我的文档", f"{at_string} /我的文档"):
             print("命令匹配！")
@@ -247,19 +246,31 @@ def message_action(data):
                 file_path = command_parts[1]
                 if os.path.exists(file_path):
                     os.remove(file_path)
-                    response_message = f"文件 '{file_path}' 已成功删除。注：如果是群文档，只会删除服务器上的，群中同名文档不会被删除"
+                    response_message = f"文件 '{file_path}' 已成功删除。注：聊天软件里的同名文档不会被清除，请手动删除"
                 else:
                     response_message = f"文件 '{file_path}' 不存在，无法删除"
             except:
                 response_message = "命令错误"
-            
+
+        # 命令： /清空文档 
+        elif command_name in ("/清空文档", f"{at_string} /清空文档"):
+            # 取得文件名
+            try:
+                if os.path.exists(user_data_path):
+                    shutil.rmtree(user_data_path)
+                    response_message = f"文件 '{user_data_path}' 下所有文件已成功删除。注：聊天软件里的同名文档不会被清除，请手动删除"
+                else:
+                    response_message = f"文件夹 '{user_data_path}' 不存在，无法删除"
+            except:
+                response_message = "命令错误"
+                        
         # 命令： /量化文档 
         elif command_name in ("/量化文档", f"{at_string} /量化文档"):
             embedding_type = "file"
             try:
                 # 新开窗口量化到新目录
-                #command = f"start /wait cmd /c \"python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at}\"" # 等待新打开的窗口执行完成
-                command = f"start cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}\"" # 不用等待新打开的窗口执行完成
+                #command = f"start /waitcmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at}\"" # 等待新打开的窗口执行完成
+                command = f"startcmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}\"" # 不用等待新打开的窗口执行完成
                 # 使用 os.system() 执行命令
                 os.system(command)
                 response_message = "正在量化，完成后另行通知，这期间你仍然可以使用你现在的文档知识库"
@@ -272,7 +283,7 @@ def message_action(data):
             site_url = base64.b64encode(json.dumps(command_parts[1]).encode()).decode()
             try:
                 # question = "请对以上内容解读，并输出一个结论"
-                command = f"start cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}\""
+                command = f"startcmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}\""
                 os.system(command)
             except Exception as e:
                 print(f"URL错误：{e}")
@@ -288,28 +299,28 @@ def message_action(data):
             # 切换到 文档问答 状态
             # 用数据库保存每个用户的状态
             switch_user_state(user_id, "文档问答")
-            response_message = "你己切换到 【文档问答】 状态，如要切换为 【聊天】或【知识库问答】，请发送命令：/聊天 或 /知识库问答\n在这种模式下，你（你们）的文档目录下的所有文档不会被分割向量化，而直接发给LLM推理"   
-
+            response_message = "你己切换到 【文档问答】 状态。其它状态命令：\n/聊天\n/网站问答\n/知识库问答"
+        
         # 命令： /网站问答 
         elif command_name in ("/网站问答", f"{at_string} /网站问答"):
             # 切换到 文档问答 状态
             # 用数据库保存每个用户的状态
             switch_user_state(user_id, "网站问答")
-            response_message = "你己切换到 【文档问答】 状态，如要切换为 【聊天】或【知识库问答】，请发送命令：/聊天 或 /知识库问答\n在这种模式下，你（你们）的文档目录下的所有文档不会被分割向量化，而直接发给LLM推理"   
+            response_message = "你己切换到 【网站问答】 状态。其它状态命令：\n/聊天\n/文档问答\n/知识库问答" 
 
         # 命令： /知识库问答 
         elif command_name in ("/知识库问答", f"{at_string} /知识库问答"):
             # 切换到 文档问答 状态
             # 用数据库保存每个用户的状态
             switch_user_state(user_id, "知识库问答")
-            response_message = "你己切换到 【知识库问答】 状态，如要切换为 【聊天】或【文档问答】，请发送命令：/聊天 或 /文档问答"   
+            response_message = "你己切换到 【知识库问答】 状态。其它状态命令：\n/聊天\n/文档问答\n/网站问答"   
 
         # 命令： /聊天 
         elif command_name in ("/聊天", f"{at_string} /聊天"):
             # 切换到 聊天 状态
             # 用数据库保存每个用户的状态
             switch_user_state(user_id, "聊天")
-            response_message = "你己切换到 【聊天】 状态，如要切换为 【知识库问答】或【文档问答】，请发送命令：/知识库问答 或 /文档问答"
+            response_message = "你己切换到 【聊天】 状态。其它状态命令：\n/网站问答\n/文档问答\n/知识库问答" 
 
         # 命令： /我的状态 
         elif command_name in ("/我的状态", f"{at_string} /我的状态"):
@@ -371,7 +382,7 @@ def message_action(data):
             # 文档问答。文档未经过分割向量化，直接发给LLM推理
             elif current_state == "文档问答":
                 question = data["message"].replace(at_string, "")
-                command = f"start cmd /c \"conda activate rag-bot && python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
+                command = f"startcmd /c \"conda activate rag-bot && python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
                 os.system(command)
                 response_message = ""
 
@@ -432,8 +443,8 @@ def event_action(data):
         if current_state == "聊天":
             file_path_temp = f"{user_data_path}_chat_temp_{user_id}"
             response_message = download_file(file_url, file_name, file_path_temp, allowed_extensions=allowed_extensions)
-            question = "请进行解读，并输出一个总结"
-            command = f"start cmd /c \"conda activate rag-bot && python docs_chat.py {file_path_temp} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
+            question = "请用中文进行解读，并输出一个总结"
+            command = f"startcmd /c \"conda activate rag-bot && python docs_chat.py {file_path_temp} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
             os.system(command)
             response_message = ""
         else:

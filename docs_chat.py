@@ -49,6 +49,8 @@ print("*" * 40)
 
 
 
+
+
 # 文件夹加载器函数
 def load_documents(data_path):
     print("正在加载" + data_path + "下的所有文档...")
@@ -56,9 +58,6 @@ def load_documents(data_path):
     loaders = loader.load()
     print(loaders)
     return loaders
-
-# 清除原来的聊天历史
-delete_all_records(source_id, user_state)
 
 
 # wxid = user_id
@@ -85,6 +84,8 @@ delete_all_records(source_id, user_state)
 
 # 调用通用聊天得出答案
 try:
+    # 清除原来的聊天历史
+    delete_all_records(source_id, user_state)
     query = f"{load_documents(embedding_data_path)}\n{question}"
     response_message = asyncio.run(chat_generic_langchain(source_id, query, user_state))
     # 如果是聊天状态，问答完成立即删除文件

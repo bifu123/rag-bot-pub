@@ -71,8 +71,7 @@ print("*" * 40)
 
 
 
-# 清除原来的聊天历史
-delete_all_records(source_id, user_state)
+
 
 # 制作站点地图
 def build_sitemap(URL):
@@ -239,6 +238,8 @@ print(loader)
 
 # 调用通用聊天得出答案
 try:
+    # 清除原来的聊天历史
+    delete_all_records(source_id, user_state)
     query = f"{loader}\n{question}"
     response_message = asyncio.run(chat_generic_langchain(source_id, query, user_state))
 except Exception as e:

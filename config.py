@@ -1,8 +1,8 @@
 # 机器人 QQ 号
-bot_qq = "564523222"
+bot_qq = "123456789"
 
 # 管理员 QQ 号
-admin_qq = "85245222"
+admin_qq = "987654321"
 
 # 允许的聊天回复
 chat_type_allow = [
@@ -31,10 +31,10 @@ allowed_extensions = [
 ]
 
 # go-cqhttp Websocket 监听地址
-ws_url = "ws://192.168.66.20:25522"  # 根据go-cqhttp配置文件中的地址修改
+ws_url = "ws://127.0.0.1:25522"  # 根据go-cqhttp配置文件中的地址修改
 
 # go-cqhttp http API接口地址
-http_url = "http://192.168.66.20:25533" # 根据go-cqhttp配置文件中的地址修改
+http_url = "http://127.0.0.1:25533" # 根据go-cqhttp配置文件中的地址修改
 
 # 源文档路径 
 data_path = "./data"
@@ -46,7 +46,7 @@ chunk_size = 800
 chunk_overlap = 128
 
 # 保存聊天记录的大小
-chat_history_size_set = 1024 # 记录越大，每次发给大模型分析的数据越多，上下文越全面。但是会增加响应的时间，而且随着话题的多样复杂，会降低大模型分析的精准度
+chat_history_size_set = 8192 # 记录越大，每次发给大模型分析的数据越多，上下文越全面。但是会增加响应的时间，而且随着话题的多样复杂，会降低大模型分析的精准度
 
 # 量化后数据保存路径
 db_path = "./chroma_db"
@@ -83,15 +83,20 @@ llm_gemini_conf = {
 } 
 ## 线上 通义千问 语言模型
 llm_tongyi_conf = {
-    "model_name": "qwen-max", # qwen-max-longcontext | qwen-max
+    "model_name": "qwen-plus", # qwen-max-longcontext | qwen-max |qwen-plus |roger/minicpm:latest
     "temperature": 0.7,
     "streaming": False
 } 
-
+# 本地 chatGLM3-6b
+llm_chatGLM_conf = {
+    "endpoint_url": "http://192.168.66.26:8000/v1/chat/completions",
+    "max_tokens": 80000,
+    "top_p": 0.9
+}
 # 模型选择
 model_choice = {
     "embedding":"ollama", # embedding: ollama | google
-    "llm": "ollama" # llm: ollama | gemini | tongyi
+    "llm": "tongyi" # llm: ollama | gemini | tongyi | chatglm
 }
 
 

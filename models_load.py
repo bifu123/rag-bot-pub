@@ -28,6 +28,9 @@ from langchain_core.runnables import RunnablePassthrough
 from langchain_core.prompts import ChatPromptTemplate
 from langchain.schema.output_parser import StrOutputParser
 
+# chatGLM3-6B 模型
+from langchain_community.llms.chatglm3 import ChatGLM3
+
 # 异步函数
 import asyncio
 
@@ -67,6 +70,13 @@ llm_tongyi = Tongyi(
     streaming = llm_tongyi_conf["streaming"]
     #enable_search = True
 ) 
+# 本地语言模型 ChatGLM3
+llm_chatGLM = ChatGLM3(
+    endpoint_url = llm_chatGLM_conf["endpoint_url"],
+    max_tokens = llm_chatGLM_conf["max_tokens"],
+    top_p = llm_chatGLM_conf["top_p"]
+)
+
 ############################# 模型选择 #################################
 # 选择量化模型
 if model_choice["embedding"] == "ollama":
@@ -78,8 +88,10 @@ if model_choice["llm"] == "ollama":
     llm = llm_ollama
 elif model_choice["llm"] == "gemini": 
     llm = llm_gemini
-else:
+elif model_choice["llm"] == "tongyi": 
     llm = llm_tongyi
+else:
+    llm = llm_chatGLM
 
 
 
