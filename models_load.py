@@ -31,6 +31,10 @@ from langchain.schema.output_parser import StrOutputParser
 # chatGLM3-6B 模型
 from langchain_community.llms.chatglm3 import ChatGLM3
 
+# kimi 模型
+from langchain_community.llms.moonshot import Moonshot
+
+
 # 异步函数
 import asyncio
 
@@ -41,6 +45,7 @@ import asyncio
 # 将各个在线模型 API key 加入环境变量
 os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
 os.environ['DASHSCOPE_API_KEY'] = DASHSCOPE_API_KEY
+os.environ["MOONSHOT_API_KEY"] = MOONSHOT_API_KEY
 ############################# 量化模型 #################################
 # 本地量化模型
 embedding_ollama = OllamaEmbeddings(
@@ -70,6 +75,11 @@ llm_tongyi = Tongyi(
     streaming = llm_tongyi_conf["streaming"]
     #enable_search = True
 ) 
+# 在线语言模型 kimi
+llm_kimi = Moonshot(
+    model_name = llm_kimi_conf["model_name"],
+    temperature = llm_kimi_conf["temperature"]
+) 
 # 本地语言模型 ChatGLM3
 llm_chatGLM = ChatGLM3(
     endpoint_url = llm_chatGLM_conf["endpoint_url"],
@@ -90,6 +100,8 @@ elif model_choice["llm"] == "gemini":
     llm = llm_gemini
 elif model_choice["llm"] == "tongyi": 
     llm = llm_tongyi
+elif model_choice["llm"] == "kimi": 
+    llm = llm_kimi
 else:
     llm = llm_chatGLM
 

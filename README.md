@@ -42,6 +42,13 @@ python listen_ws.py
 | /清空记录 | 清空用户私有或者群中公共的问答历史记录 | 在聊天历史过多或话题繁杂而影响了机器人分析回复质量时使用                         |
  
  ## 重要更新
+ ### 2024-4-10
+ - 增加 moonshot ai kimi 模型 API 
+ 以前的使用的小伙伴，请使用以下命令执行升级
+ ```bash
+ pip install --upgrade --force-reinstall langchain_community langchain_openai
+ ```
+
 ### 2024-4-3
  - 发送文档后立即解读，并保持有该文档的记忆。
  - 使用异步函数调用，减少并发访问时的阻塞。
