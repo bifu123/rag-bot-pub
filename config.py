@@ -102,9 +102,14 @@ llm_chatGLM_conf = {
 }
 # 模型选择
 model_choice = {
+    # 本地向量模型
     "embedding":"ollama", # embedding: ollama | google
-    "llm": "tongyi" # llm: ollama | gemini | tongyi | chatglm | kimi
+    # 聊天模型
+    "llm": "tongyi", # llm: ollama | gemini | tongyi | chatglm | kimi
+    # 知识库模型
+    "llm_rag": "ollama" # llm: ollama | gemini | tongyi | chatglm | kimi 
 }
+
 
 
 

@@ -93,7 +93,8 @@ if model_choice["embedding"] == "ollama":
     embedding = embedding_ollama
 else:
     embedding = embedding_google
-# 选择语言模型
+
+# 选择聊天语言模型
 if model_choice["llm"] == "ollama":
     llm = llm_ollama
 elif model_choice["llm"] == "gemini": 
@@ -104,6 +105,18 @@ elif model_choice["llm"] == "kimi":
     llm = llm_kimi
 else:
     llm = llm_chatGLM
+
+# 选择知识库语言模型
+if model_choice["llm_rag"] == "ollama":
+    llm_rag = llm_ollama
+elif model_choice["llm_rag"] == "gemini": 
+    llm_rag = llm_gemini
+elif model_choice["llm_rag"] == "tongyi": 
+    llm_rag = llm_tongyi
+elif model_choice["llm_rag"] == "kimi": 
+    llm_rag = llm_kimi
+else:
+    llm_rag = llm_chatGLM
 
 
 
