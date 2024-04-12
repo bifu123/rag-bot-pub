@@ -171,6 +171,10 @@ def get_response_from_plugins(post_type, user_state, data):
     # 加载插件文件夹中的所有函数
     plugin_directory = 'plugins'
     functions = load_plugins(plugin_directory)
+    try:
+        message = str(data["message"])
+    except:
+    	message = ""
 
     # 按优先级顺序排序函数
     functions.sort(key=lambda x: getattr(x, '_priority', float('inf')))
@@ -187,7 +191,7 @@ def get_response_from_plugins(post_type, user_state, data):
     # 输出结果
     print(f"插件返回结果：{response_from_plugins}")
     # 准备问题（将从插件获取的结果与当前问题拼接成上下文供LLM推理)
-    query = response_from_plugins + data["message"]
+    query = response_from_plugins + message
     return query
 
 
