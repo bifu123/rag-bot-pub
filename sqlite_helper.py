@@ -34,6 +34,7 @@ def create_tables(connection):
     # 创建用户状态表
     cursor.execute('''CREATE TABLE IF NOT EXISTS user_states (
                       user_id TEXT PRIMARY KEY,
+                      source_id TEXT,
                       state TEXT)''')
     # 创建群消息开关状态表
     cursor.execute('''CREATE TABLE IF NOT EXISTS allow_states (
@@ -70,12 +71,12 @@ def close_database_connection():
         del db_connections[thread_id]
 
 # 函数用于切换用户状态
-def switch_user_state(user_id, new_state):
+def switch_user_state(user_id, source_id, new_state):
     with db_lock:
         conn = get_database_connection()
         cursor = conn.cursor()
-        cursor.execute('''INSERT OR REPLACE INTO user_states (user_id, state)
-                          VALUES (?, ?)''', (user_id, new_state))
+        cursor.execute('''INSERT OR REPLACE INTO user_states (user_id, source_id, state)
+                          VALUES (?, ?, ?)''', (user_id, source_id, new_state))
         conn.commit()
 
 # 函数用于切换群消息开关状态
@@ -88,11 +89,11 @@ def switch_allow_state(group_id, new_state):
         conn.commit()
 
 # 函数用于获取用户状态
-def get_user_state(user_id):
+def get_user_state(user_id, source_id):
     with db_lock:
         conn = get_database_connection()
         cursor = conn.cursor()
-        cursor.execute('''SELECT state FROM user_states WHERE user_id = ?''', (user_id,))
+        cursor.execute('''SELECT state FROM user_states WHERE user_id = ? and source_id = ?''', (user_id, source_id))
         result = cursor.fetchone()
         if result:
             return result[0]
