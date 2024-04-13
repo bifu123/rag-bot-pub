@@ -149,49 +149,65 @@ def get_image(text):
         return False, None
 
 
-# 加载插件文件夹的函数
-def load_plugins(directory):
-    functions = []
-    for filename in os.listdir(directory):
-        if filename.endswith('.py'):
-            module_name = filename[:-3]  # 去除文件扩展名
-            module_path = os.path.join(directory, filename)
-            spec = importlib.util.spec_from_file_location(module_name, module_path)
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)
-            # 遍历模块中的所有成员
-            for name, obj in inspect.getmembers(module):
-                # 检查对象是否为函数，并且带有优先级属性
-                if inspect.isfunction(obj) and hasattr(obj, '_priority'):
-                    functions.append(obj)
-    return functions
-
-# 插件问答函数
-def get_response_from_plugins(post_type, user_state, data):
-    # 加载插件文件夹中的所有函数
-    plugin_directory = 'plugins'
-    functions = load_plugins(plugin_directory)
+# 加载插件、构建query的函数
+def get_response_from_plugins(post_type_p, user_state_p, data):
+    # 存储每个函数的结果
     try:
         message = str(data["message"])
     except:
-    	message = ""
+        message = ""
 
-    # 按优先级顺序排序函数
-    functions.sort(key=lambda x: getattr(x, '_priority', float('inf')))
+    plugin_dir = 'plugins'
 
-    # 遍历执行所有函数，把每个函数的输出拼成一个结果字符串
-    response_from_plugins = ""
-    for func in functions:
-        if func._user_state == user_state and func._post_type == post_type: # 函数执行的条件
-            response_from_plugins += f"{func(data)}"
-            response_from_plugins += "\n"
-            if getattr(func, '_block', False): # 跳出循环的条件
-                break
+    results = []
+    # 遍历plugins目录下的所有文件
+    for filename in os.listdir(plugin_dir):
+        if filename.endswith('.py'):
+            plugin_path = os.path.join(plugin_dir, filename)
+            # 动态导入模块
+            spec = importlib.util.spec_from_file_location("plugin_module", plugin_path)
+            plugin_module = importlib.util.module_from_spec(spec)
+            spec.loader.exec_module(plugin_module)
+            
+            # 获取模块中的所有函数及其优先级
+            functions_with_priority = [(getattr(plugin_module, func), getattr(plugin_module, func)._priority, getattr(plugin_module, func)._function_type, getattr(plugin_module, func)._post_type, getattr(plugin_module, func)._user_state) for func in dir(plugin_module) if callable(getattr(plugin_module, func)) and hasattr(getattr(plugin_module, func), '_priority')]
+            
+            # 根据优先级对函数进行排序
+            functions_with_priority.sort(key=lambda x: x[1])
+            
+            result_serial = None  # 初始值设为None
+            result_parallel = ''  # 用于并行执行的结果串联
+            # 依次执行函数
+            for function, priority, function_type, post_type, user_state in functions_with_priority:
+                # 判断function_type、post_type和user_state是否满足特定条件
+                if function_type == "serial" and post_type == post_type_p and user_state == user_state_p:
+                    if result_serial is None:
+                        # 如果result为None，则根据函数参数类型设定初始值
+                        if 'dict' in str(function.__annotations__.values()):
+                            result_serial = {}
+                        elif 'str' in str(function.__annotations__.values()):
+                            result_serial = ''
+                        # 可以根据其他可能的参数类型继续添加条件
+                    result_serial = function(data=result_serial)  # 将data作为参数传递给函数
+                    # 如果block=True，则结束循环，不再执行后续函数
+                    if getattr(function, '_block', False):
+                        break
+                elif function_type == "parallel" and post_type == post_type_p and user_state == user_state_p:
+                    result_parallel += f"{function(data)}"
+                    result_parallel += "\n"
+            
+            # 将每个函数的结果存储起来
+            results.append(f"{result_parallel}" + "\n" + f"{result_serial}")
+    
+    # 将所有结果组合起来
+    result = "\n".join(results)
+    #result = f"{result}".replace(None, "")
+    #return result if results else ''  # 如果结果为空，返回空字符串
 
     # 输出结果
-    print(f"插件返回结果：{response_from_plugins}")
+    print(f"插件返回结果：{result}")
     # 准备问题（将从插件获取的结果与当前问题拼接成上下文供LLM推理)
-    query = response_from_plugins + message
+    query = f"{result}" + f"{message}"
     return query
 
 
@@ -264,7 +280,7 @@ def message_action(data):
         current_state = get_user_state(user_id, source_id)
         try:
             question = "请用中文对以上内容解读，并输出一个结论"
-            command = f"cmd /c \"conda activate rag-bot && python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
+            command = f"start cmd /c \"conda activate rag-bot && python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
             os.system(command)
         except Exception as e:
             print(f"URL错误：{e}")
@@ -273,6 +289,7 @@ def message_action(data):
 
     # 在允许回复的聊天类型中处理
     if chat_type in chat_type_allow and get_urls(message)[0] == "no": 
+       
         # 命令： /我的文档 
         if command_name in ("/我的文档", f"{at_string} /我的文档"):
             print("命令匹配！")
@@ -320,7 +337,7 @@ def message_action(data):
             try:
                 # 新开窗口量化到新目录
                 #command = f"start /wait cmd /c \"python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at}\"" # 等待新打开的窗口执行完成
-                command = f"cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}\"" # 不用等待新打开的窗口执行完成
+                command = f"start cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}\"" # 不用等待新打开的窗口执行完成
                 # 使用 os.system() 执行命令
                 os.system(command)
                 response_message = "正在量化，完成后另行通知，这期间你仍然可以使用你现在的文档知识库"
@@ -333,7 +350,7 @@ def message_action(data):
             site_url = base64.b64encode(json.dumps(command_parts[1]).encode()).decode()
             try:
                 # question = "请对以上内容解读，并输出一个结论"
-                command = f"cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}\""
+                command = f"start cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}\""
                 os.system(command)
             except Exception as e:
                 print(f"URL错误：{e}")
@@ -356,21 +373,21 @@ def message_action(data):
             # 切换到 文档问答 状态
             # 用数据库保存每个用户的状态
             switch_user_state(user_id, source_id, "网站问答")
-            response_message = "你己切换到 【网站问答】 状态。其它状态命令：\n/聊天\n/文档问答\n/知识库问答" 
+            response_message = "你己切换到 【网站问答】 状态。其它状态命令：\n/聊天\n/文档问答\n/知识库问答\n插件问答" 
 
         # 命令： /知识库问答 
         elif command_name in ("/知识库问答", f"{at_string} /知识库问答"):
             # 切换到 文档问答 状态
             # 用数据库保存每个用户的状态
             switch_user_state(user_id, source_id, "知识库问答")
-            response_message = "你己切换到 【知识库问答】 状态。其它状态命令：\n/聊天\n/文档问答\n/网站问答"   
+            response_message = "你己切换到 【知识库问答】 状态。其它状态命令：\n/聊天\n/文档问答\n/网站问答\n插件问答"   
 
         # 命令： /聊天 
         elif command_name in ("/聊天", f"{at_string} /聊天"):
             # 切换到 聊天 状态
             # 用数据库保存每个用户的状态
             switch_user_state(user_id, source_id, "聊天")
-            response_message = "你己切换到 【聊天】 状态。其它状态命令：\n/网站问答\n/文档问答\n/知识库问答" 
+            response_message = "你己切换到 【聊天】 状态。其它状态命令：\n/网站问答\n/文档问答\n/知识库问答\n插件问答" 
 
         # 命令： /插件问答
         elif command_name in ("/插件问答", f"{at_string} /插件问答"):
@@ -443,7 +460,7 @@ def message_action(data):
             # 文档问答。文档未经过分割向量化，直接发给LLM推理
             elif current_state == "文档问答":
                 question = data["message"].replace(at_string, "")
-                command = f"cmd /c \"conda activate rag-bot && python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
+                command = f"start cmd /c \"conda activate rag-bot && python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
                 os.system(command)
                 response_message = ""
 
@@ -507,7 +524,7 @@ def event_action(data):
             file_path_temp = f"{user_data_path}_chat_temp_{user_id}"
             response_message = download_file(file_url, file_name, file_path_temp, allowed_extensions=allowed_extensions)
             question = "请用中文进行解读，并输出一个总结"
-            command = f"cmd /c \"conda activate rag-bot && python docs_chat.py {file_path_temp} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
+            command = f"start cmd /c \"conda activate rag-bot && python docs_chat.py {file_path_temp} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
             os.system(command)
             response_message = ""
         else:
