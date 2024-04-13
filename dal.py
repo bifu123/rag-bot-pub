@@ -326,6 +326,8 @@ def message_action(data):
             name_space_command = name_space_command.replace("::", "")
             switch_user_name_space(user_id, source_id, name_space_command)
             print(f"已切换到 【{name_space_command}】 命名空间")
+            user_state = get_user_state_from_db(user_id, source_id)
+            delete_all_records(source_id, user_state) # 清空聊天历史
             response_message = f"已切换到 【{name_space_command}】 命名空间"
 
         # 其它命令和问答
