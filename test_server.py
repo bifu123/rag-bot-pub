@@ -1,49 +1,52 @@
+# 你现在唯一没有出错的版本是：
+
 import asyncio
 import websockets
 import json
 from aiohttp import web
 
-async def websocket_handler(websocket, path):
-    data = {
-        "post_type": "message",
-        "message_type": "private",
-        "time": 1712140345,
-        "self_id": 3152246598,
-        "sub_type": "friend",
-        "raw_message": "hello",
-        "font": 0,
-        "sender": {
-            "age": 0,
-            "nickname": "不知道是谁",
-            "sex": "unknown",
-            "user_id": 415135222
-        },
-        "message_id": -1518347102,
-        "user_id": 415135222,
-        "target_id": 3152246598,
-        "message": "张三考了多少分"
-    }
-    await websocket.send(json.dumps(data))
+# 全局变量，用于保存 WebSocket 连接
+websocket_connections = []
 
 async def http_handler(request):
     print("Received HTTP request:", request.method, request.path)
     return web.Response(text="Hello, world!")
 
 async def send_private_msg(request):
-    data = {}
+    global websocket_connections
     try:
         data = await request.json()
-        print("Received POST request at /send_private_msg:", data)
-        
-        # 获取查询参数
-        user_id = request.query.get('user_id', '')
-        message = request.query.get('message', '')
-        print(f"User ID: {user_id}, Message: {message}")
-        
-        return web.Response(text="OK")
+        #print("Received POST request at /send_private_msg:", data)
+        print(len(data))
+        if data["post_type"]:
+            # 存储 WebSocket 连接返回的消息
+            websocket_responses = []
+            # 向所有 WebSocket 连接发送消息
+            for websocket in websocket_connections:
+                await websocket.send(json.dumps(data)) 
+        else:
+            print("显示出来，不要发给WS")
+            
+        # 返回发送的数据的JSON格式
+        #return web.Response(text=data["message"], content_type="text/plain")
+        return web.Response(text="ok")
     except json.JSONDecodeError as e:
         print("Error decoding JSON:", e)
         return web.Response(text="Error decoding JSON")
+
+async def websocket_handler(websocket, path):
+    global websocket_connections
+    print("WebSocket connection established")
+    websocket_connections.append(websocket)
+    
+    try:
+        async for message in websocket:
+            print("Received WebSocket message:", message)
+            # 在这里处理接收到的 WebSocket 消息
+            # 这里只是简单打印接收到的消息
+    finally:
+        print("WebSocket connection closed")
+        websocket_connections.remove(websocket)
 
 async def main():
     websocket_server = await websockets.serve(websocket_handler, "0.0.0.0", 25522)
@@ -64,13 +67,4 @@ async def main():
 asyncio.run(main())
 
 
-
-
-# 发送方发送是这样的：
-# url = "http://127.0.0.1:25533/send_private_msg"
-# params = {
-#     "user_id": "415135222", 
-#     "message": "你好"
-# } 
-
-# 在这页上怎把params获取并显示出来
+# 请修改代码：让25533端同时可以接受get请求，请

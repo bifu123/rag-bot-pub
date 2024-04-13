@@ -35,6 +35,7 @@ def create_tables(connection):
     cursor.execute('''CREATE TABLE IF NOT EXISTS user_states (
                       user_id TEXT PRIMARY KEY,
                       source_id TEXT,
+                      name_space TEXT DEFAULT 'test',
                       state TEXT)''')
     # 创建群消息开关状态表
     cursor.execute('''CREATE TABLE IF NOT EXISTS allow_states (
@@ -70,23 +71,6 @@ def close_database_connection():
         db_connections[thread_id].close()
         del db_connections[thread_id]
 
-# 函数用于切换用户状态
-def switch_user_state(user_id, source_id, new_state):
-    with db_lock:
-        conn = get_database_connection()
-        cursor = conn.cursor()
-        cursor.execute('''INSERT OR REPLACE INTO user_states (user_id, source_id, state)
-                          VALUES (?, ?, ?)''', (user_id, source_id, new_state))
-        conn.commit()
-
-# 函数用于切换群消息开关状态
-def switch_allow_state(group_id, new_state):
-    with db_lock:
-        conn = get_database_connection()
-        cursor = conn.cursor()
-        cursor.execute('''INSERT OR REPLACE INTO allow_states (group_id, state)
-                          VALUES (?, ?)''', (group_id, new_state))
-        conn.commit()
 
 # 函数用于获取用户状态
 def get_user_state(user_id, source_id):
@@ -99,6 +83,35 @@ def get_user_state(user_id, source_id):
             return result[0]
         else:
             return "聊天"
+# 函数用于切换用户状态
+def switch_user_state(user_id, source_id, new_state):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        cursor.execute('''INSERT OR REPLACE INTO user_states (user_id, source_id, state)
+                          VALUES (?, ?, ?)''', (user_id, source_id, new_state))
+        conn.commit()
+
+# 函数用于获取用户插件命名空间
+def get_user_name_space(user_id, source_id):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        cursor.execute('''SELECT name_space FROM user_states WHERE user_id = ? and source_id = ?''', (user_id, source_id))
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        else:
+            return "no"
+        
+# 函数用于切换用户插件命名空间
+def switch_user_name_space(user_id, source_id, name_space):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        cursor.execute('''INSERT OR REPLACE INTO user_states (user_id, source_id, name_space)
+                          VALUES (?, ?, ?)''', (user_id, source_id, name_space))
+        conn.commit()
 
 # 函数用于获取群消息开关状态
 def get_allow_state_from_db(group_id):
@@ -111,6 +124,15 @@ def get_allow_state_from_db(group_id):
             return result[0]
         else:
             return None
+
+# 函数用于切换群消息开关状态
+def switch_allow_state(group_id, new_state):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        cursor.execute('''INSERT OR REPLACE INTO allow_states (group_id, state)
+                          VALUES (?, ?)''', (group_id, new_state))
+        conn.commit()
 
 # 函数用于插入记录到db_path表
 def insert_into_db_path(source_id, path):

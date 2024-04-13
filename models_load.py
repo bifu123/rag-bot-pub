@@ -164,6 +164,8 @@ async def do_chat_history(chat_history, source_id, query, answer, user_state):
 
 # 向量检索聊天（执行向量链）
 async def run_chain(retriever, source_id, query, user_state="聊天"):
+    print("*" * 50)
+    print("当前使用的知识库LLM：", llm_rag)
     template_cn = """请根据上下文和对话历史记录完整地回答问题:
     {context}
     {question}
@@ -181,17 +183,19 @@ async def run_chain(retriever, source_id, query, user_state="聊天"):
         "context": lambda x: retriever.get_relevant_documents(x["question"]),
         "question": RunnablePassthrough(),
         "chat_history": lambda x: chat_history  # 使用历史记录的步骤
-    }) | prompt | llm | StrOutputParser()
+    }) | prompt | llm_rag | StrOutputParser()
     # 执行问答
     request = {"question": query}
-    answer = chain.invoke(request)
+    response_message = chain.invoke(request)
     # 处理聊天记录 
-    await do_chat_history(chat_history, source_id, query, answer, user_state)
+    await do_chat_history(chat_history, source_id, query, response_message, user_state)
     # 返回结果
-    return answer
+    return response_message
 
 # 通用聊天
 async def chat_generic_langchain(source_id, query, user_state="聊天"):
+    print("*" * 50)
+    print("当前使用的聊天LLM：", llm)
     # 从数据库中提取 source_id 的聊天记录
     data = fetch_chat_history(source_id, user_state)
     chat_history = get_chat_history(data)

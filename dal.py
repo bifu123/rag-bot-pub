@@ -150,7 +150,7 @@ def get_image(text):
 
 
 # 加载插件、构建query的函数
-def get_response_from_plugins(post_type_p, user_state_p, data):
+def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
     # 存储每个函数的结果
     try:
         message = str(data["message"])
@@ -158,6 +158,7 @@ def get_response_from_plugins(post_type_p, user_state_p, data):
         message = ""
 
     plugin_dir = 'plugins'
+
 
     results = []
     # 遍历plugins目录下的所有文件
@@ -170,7 +171,7 @@ def get_response_from_plugins(post_type_p, user_state_p, data):
             spec.loader.exec_module(plugin_module)
             
             # 获取模块中的所有函数及其优先级
-            functions_with_priority = [(getattr(plugin_module, func), getattr(plugin_module, func)._priority, getattr(plugin_module, func)._function_type, getattr(plugin_module, func)._post_type, getattr(plugin_module, func)._user_state) for func in dir(plugin_module) if callable(getattr(plugin_module, func)) and hasattr(getattr(plugin_module, func), '_priority')]
+            functions_with_priority = [(getattr(plugin_module, func), getattr(plugin_module, func)._name_space, getattr(plugin_module, func)._priority, getattr(plugin_module, func)._function_type, getattr(plugin_module, func)._post_type, getattr(plugin_module, func)._user_state) for func in dir(plugin_module) if callable(getattr(plugin_module, func)) and hasattr(getattr(plugin_module, func), '_priority')]
             
             # 根据优先级对函数进行排序
             functions_with_priority.sort(key=lambda x: x[1])
@@ -178,9 +179,9 @@ def get_response_from_plugins(post_type_p, user_state_p, data):
             result_serial = None  # 初始值设为None
             result_parallel = ''  # 用于并行执行的结果串联
             # 依次执行函数
-            for function, priority, function_type, post_type, user_state in functions_with_priority:
+            for function, name_space, priority, function_type, post_type, user_state in functions_with_priority:
                 # 判断function_type、post_type和user_state是否满足特定条件
-                if function_type == "serial" and post_type == post_type_p and user_state == user_state_p:
+                if function_type == "serial" and post_type == post_type_p and user_state == user_state_p and name_space == name_space_p:
                     if result_serial is None:
                         # 如果result为None，则根据函数参数类型设定初始值
                         if 'dict' in str(function.__annotations__.values()):
@@ -192,7 +193,7 @@ def get_response_from_plugins(post_type_p, user_state_p, data):
                     # 如果block=True，则结束循环，不再执行后续函数
                     if getattr(function, '_block', False):
                         break
-                elif function_type == "parallel" and post_type == post_type_p and user_state == user_state_p:
+                elif function_type == "parallel" and post_type == post_type_p and user_state == user_state_p and name_space == name_space_p:
                     result_parallel += f"{function(data)}"
                     result_parallel += "\n"
             
@@ -201,8 +202,6 @@ def get_response_from_plugins(post_type_p, user_state_p, data):
     
     # 将所有结果组合起来
     result = "\n".join(results)
-    #result = f"{result}".replace(None, "")
-    #return result if results else ''  # 如果结果为空，返回空字符串
 
     # 输出结果
     print(f"插件返回结果：{result}")
@@ -249,6 +248,8 @@ def message_action(data):
         embedding_db_path_tmp = user_db_path
         embedding_db_path_tmp_site = user_db_path + "_site"
 
+    # 获取name_space
+    name_space = get_user_name_space(user_id, source_id)
 
     # 读取数据库当前source_id的存储路径
     if get_path_by_source_id(source_id) is None:
@@ -442,7 +443,7 @@ def message_action(data):
             # 当状态为插件问答
             if current_state == "插件问答":
                 post_type =  data["post_type"]
-                query = get_response_from_plugins(post_type, current_state, data)
+                query = get_response_from_plugins(name_space, post_type, current_state, data)
                 # 执行问答
                 response_message = asyncio.run(chat_generic_langchain(source_id, query, current_state))
  
@@ -493,6 +494,8 @@ def event_action(data):
     user_id = get_chat_type(data)["user_id"]
     group_id = get_chat_type(data)["group_id"]
     
+    # 获取name_space
+    name_space = get_user_name_space(user_id, source_id)
 
     if chat_type in ("group_at", "group"):
         source_id = group_id
@@ -535,7 +538,7 @@ def event_action(data):
         # 当状态为插件问答
         if current_state == "插件问答":
             post_type =  data["post_type"]
-            query = get_response_from_plugins(post_type, current_state, data)
+            query = get_response_from_plugins(name_space, post_type, current_state, data)
             # 执行问答
             response_message = asyncio.run(chat_generic_langchain(source_id, query, current_state))
         else:
