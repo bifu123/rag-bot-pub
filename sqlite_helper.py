@@ -35,8 +35,12 @@ def create_tables(connection):
     cursor.execute('''CREATE TABLE IF NOT EXISTS user_states (
                       user_id TEXT PRIMARY KEY,
                       source_id TEXT,
-                      name_space TEXT DEFAULT 'test',
                       state TEXT)''')
+    # 创建用户命名空间表
+    cursor.execute('''CREATE TABLE IF NOT EXISTS user_name_space (
+                      user_id TEXT PRIMARY KEY,
+                      source_id TEXT,
+                      name_space TEXT DEFAULT 'test')''')
     # 创建群消息开关状态表
     cursor.execute('''CREATE TABLE IF NOT EXISTS allow_states (
                       group_id TEXT PRIMARY KEY,
@@ -97,19 +101,19 @@ def get_user_name_space(user_id, source_id):
     with db_lock:
         conn = get_database_connection()
         cursor = conn.cursor()
-        cursor.execute('''SELECT name_space FROM user_states WHERE user_id = ? and source_id = ?''', (user_id, source_id))
+        cursor.execute('''SELECT name_space FROM user_name_space WHERE user_id = ? and source_id = ?''', (user_id, source_id))
         result = cursor.fetchone()
         if result:
             return result[0]
         else:
-            return "no"
+            return "test"
         
 # 函数用于切换用户插件命名空间
 def switch_user_name_space(user_id, source_id, name_space):
     with db_lock:
         conn = get_database_connection()
         cursor = conn.cursor()
-        cursor.execute('''INSERT OR REPLACE INTO user_states (user_id, source_id, name_space)
+        cursor.execute('''INSERT OR REPLACE INTO user_name_space (user_id, source_id, name_space)
                           VALUES (?, ?, ?)''', (user_id, source_id, name_space))
         conn.commit()
 

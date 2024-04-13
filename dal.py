@@ -219,6 +219,14 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
     return query
 
 
+# 获取当前用户状态
+def get_user_state_from_db(user_id, source_id):
+    # 获取当前用户状态
+    user_state = get_user_state(user_id, source_id)
+    if user_state is None:
+        user_state = "聊天"
+        switch_user_state(user_id, source_id, "聊天")
+    return user_state
 
 #**************** 消息处理 ********************************************
 def message_action(data):
@@ -258,7 +266,9 @@ def message_action(data):
         embedding_db_path_tmp_site = user_db_path + "_site"
 
     # 获取name_space
+    print("="*40)
     name_space = get_user_name_space(user_id, source_id)
+    print("当前命名空间：", name_space)
 
     # 读取数据库当前source_id的存储路径
     if get_path_by_source_id(source_id) is None:
@@ -287,7 +297,7 @@ def message_action(data):
     matches = get_image(message)[0]
     print("是否包含图片：", matches)  
     if get_urls(message)[0] == "yes" and matches == False:
-        current_state = get_user_state(user_id, source_id)
+        current_state = get_user_state_from_db(user_id, source_id)
         try:
             question = "请用中文对以上内容解读，并输出一个结论"
             command = f"start cmd /c \"conda activate rag-bot && python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
@@ -309,6 +319,7 @@ def message_action(data):
             name_space_command = name_space_command.replace("::", "")
             switch_user_name_space(user_id, source_id, name_space_command)
             response_message = f"已切换到 【{name_space_command}】 命名空间"
+            
         else: 
             # 命令： /我的文档 
             if command_name in ("/我的文档", f"{at_string} /我的文档"):
@@ -417,14 +428,17 @@ def message_action(data):
             # 命令： /我的状态 
             elif command_name in ("/我的状态", f"{at_string} /我的状态"):
                 # 从数据库中查找用户当前状态
-                current_state = get_user_state(user_id, source_id)
-                response_message = "【" + current_state + "】"
+                current_state = get_user_state_from_db(user_id, source_id)
+                response_message = f"【{current_state}】"
             
             # 命令： /我的命名空间 
             elif command_name in ("/我的命名空间", f"{at_string} /我的命名空间"):
                 # 从数据库中查找用户当前状态
                 current_state = get_user_name_space(user_id, source_id)
-                response_message = "【" + current_state + "】"
+                if current_state == "no":
+                    response_message = "你当前所在聊天对象中还没有插件，你可以创建插件，或用 ::命名空间 的命令切换到已有的插件命名空间"
+                else:
+                    response_message = "【" + current_state + "】"
             
             # 命令： /开启群消息 
             elif command_name in ("/开启群消息", f"{at_string} /开启群消息"):
@@ -445,7 +459,7 @@ def message_action(data):
             # 命令： /清空记录 
             elif command_name in ("/清空记录", f"{at_string} /清空记录"):
                 try:
-                    current_state = get_user_state(user_id, source_id)
+                    current_state = get_user_state_from_db(user_id, source_id)
                     delete_all_records(source_id, current_state)
                     response_message = "消息已经清空"
                 except Exception as e:
@@ -453,7 +467,7 @@ def message_action(data):
 
             # 和 LLM 对话
             else:
-                current_state = get_user_state(user_id, source_id) # 先检查用户状态
+                current_state = get_user_state_from_db(user_id, source_id) # 先检查用户状态
                 print(f"当前状态：{current_state}")
                 # 当状态为文档问答
                 if current_state == "知识库问答":
@@ -529,7 +543,7 @@ def event_action(data):
     else:
         source_id = user_id
 
-    current_state = get_user_state(user_id, source_id) # 先检查用户状态
+    current_state = get_user_state_from_db(user_id, source_id) # 先检查用户状态
   
     print("="*40)
     print(f"chat_type:{chat_type}\nat:{at}\nuser_id:{user_id}\ngroup_id:{group_id}\nsource_id:{source_id}\ncurrent_state:{current_state}")
