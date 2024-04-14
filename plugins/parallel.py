@@ -53,14 +53,21 @@ def fun_1(data):
 # 插件函数示例2
 @fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=4, block=True)
 def fun_2(data):
-    msg = f"他喜欢国学文化"
+    msg = f"他喜欢国学文化、创办了元龙山寨"
     return msg
 
 # 插件函数示例3
 @fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=5)
 def fun_3(data):
-    msg = f"元龙居士原来是一个养猪的人"
+    msg = f"元龙居士原来是一个养猪的人、他曾经用特别的理念，打造了元龙山生态产品"
     return msg
+
+# 插件函数示例4
+@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=6)
+def fun_3(data):
+    msg = f"他的头发是白的"
+    return msg
+
 
 
 

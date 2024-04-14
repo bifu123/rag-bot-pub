@@ -181,7 +181,7 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
             spec.loader.exec_module(plugin_module)
             
             # 获取模块中的所有函数及其优先级
-            functions_with_priority = [(getattr(plugin_module, func), getattr(plugin_module, func)._name_space, getattr(plugin_module, func)._priority, getattr(plugin_module, func)._function_type, getattr(plugin_module, func)._post_type, getattr(plugin_module, func)._user_state) for func in dir(plugin_module) if callable(getattr(plugin_module, func)) and hasattr(getattr(plugin_module, func), '_priority')]
+            functions_with_priority = [(getattr(plugin_module, func), getattr(plugin_module, func)._name_space, getattr(plugin_module, func)._priority, getattr(plugin_module, func)._function_type, getattr(plugin_module, func)._post_type, getattr(plugin_module, func)._user_state, getattr(plugin_module, func)._block) for func in dir(plugin_module) if callable(getattr(plugin_module, func)) and hasattr(getattr(plugin_module, func), '_priority')]
             
             # 根据优先级对函数进行排序
             functions_with_priority.sort(key=lambda x: x[1])
@@ -189,7 +189,7 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
             result_serial = None  # 初始值设为None
             result_parallel = ''  # 用于并行执行的结果串联
             # 依次执行函数
-            for function, name_space, priority, function_type, post_type, user_state in functions_with_priority:
+            for function, name_space, priority, function_type, post_type, user_state, block in functions_with_priority:
                 # 判断function_type、post_type和user_state是否满足特定条件
                 if function_type == "serial" and post_type == post_type_p and user_state == user_state_p and name_space == name_space_p:
                     if result_serial is None:
@@ -201,11 +201,15 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
                         # 可以根据其他可能的参数类型继续添加条件
                     result_serial = function(data=result_serial)  # 将data作为参数传递给函数
                     # 如果block=True，则结束循环，不再执行后续函数
-                    if getattr(function, '_block', False):
+                    if getattr(function, '_block', True):
                         break
                 elif function_type == "parallel" and post_type == post_type_p and user_state == user_state_p and name_space == name_space_p:
                     result_parallel += f"{function(data)}"
                     result_parallel += "\n"
+
+                    # 如果block=True，则结束循环，不再执行后续函数
+                    if getattr(function, '_block', True):
+                        break
             
             # 将每个函数的结果存储起来
             results.append(f"{result_parallel}" + "\n" + f"{result_serial}")
@@ -218,7 +222,6 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
     # 准备问题（将从插件获取的结果与当前问题拼接成上下文供LLM推理)
     query = f"{result}" + f"{message}"
     return query
-
 
 # 获取当前用户状态
 def get_user_state_from_db(user_id, source_id):
@@ -320,14 +323,14 @@ def message_action(data):
 
     # 在允许回复的聊天类型中处理
     if chat_type in chat_type_allow and get_urls(message)[0] == "no": 
-
+        
         # 切换命名空间命令
         if is_name_space_command == True:
+            delete_all_records(source_id, user_state) # 清空聊天历史
             name_space_command = name_space_command.replace("::", "")
             switch_user_name_space(user_id, source_id, name_space_command)
             print(f"已切换到 【{name_space_command}】 命名空间")
             user_state = get_user_state_from_db(user_id, source_id)
-            delete_all_records(source_id, user_state) # 清空聊天历史
             response_message = f"已切换到 【{name_space_command}】 命名空间"
 
         # 其它命令和问答
