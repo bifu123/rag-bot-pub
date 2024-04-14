@@ -363,31 +363,34 @@ def message_action(data):
 
             # 命令： /邀请 
             elif command_name in ("/邀请", f"{at_string} /邀请"):
-                # 获取命令参数
-                tag_user_id = str(command_parts[1])
-                tag_source_id = str(command_parts[2])
-                tag_state = command_parts[3]
                 try:
-                    tag_name_space = command_parts[4]
-                except:
-                    tag_name_space = ""
+                    # 获取命令参数
+                    tag_user_id = str(command_parts[1])
+                    tag_source_id = str(command_parts[2])
+                    tag_state = command_parts[3]
+                    try:
+                        tag_name_space = command_parts[4]
+                    except:
+                        tag_name_space = ""
 
-                # 改变对方状态:
-                switch_user_state(tag_user_id, tag_source_id, tag_state)
+                    # 改变对方状态:
+                    switch_user_state(tag_user_id, tag_source_id, tag_state)
 
-                # 改变对命名空间
-                if tag_name_space != "":    
-                    switch_user_name_space(tag_user_id, tag_source_id, tag_name_space)
-                    response_tag = f"【{user_id}】 邀请了你进入\n状态： 【{tag_state}】 \n命名空间：【{tag_name_space}】"
-                else:
-                    response_tag = f"【{user_id}】 邀请了你进入\n状态： 【{tag_state}】"
+                    # 改变对方命名空间
+                    if tag_name_space != "":    
+                        switch_user_name_space(tag_user_id, tag_source_id, tag_name_space)
+                        response_tag = f"【{user_id}】 邀请了你进入\n状态： 【{tag_state}】 \n命名空间：【{tag_name_space}】"
+                    else:
+                        response_tag = f"【{user_id}】 邀请了你进入\n状态： 【{tag_state}】"
 
-                response_message =  f"已邀请"
-                # 给对方发送通知
-                try:
-                    asyncio.run(answer_action(chat_type, tag_user_id, group_id, at, response_tag))
-                except:
-                    pass
+                    response_message =  f"已邀请"
+                    # 给对方发送通知
+                    try:
+                        asyncio.run(answer_action(chat_type, tag_user_id, group_id, at, response_tag))
+                    except:
+                        pass
+                except Exception as e:
+                    response_message = f"邀请错误：{e}"
 
             # 命令： /清空文档 
             elif command_name in ("/清空文档", f"{at_string} /清空文档"):
@@ -468,7 +471,7 @@ def message_action(data):
             # 命令： /插件问答
             elif command_name in ("/插件问答", f"{at_string} /插件问答"):
                 switch_user_state(user_id, source_id, "插件问答")
-                response_message = "你己切换到 【插件问答】 状态。其它状态命令：\n聊天\n/网站问答\n/文档问答\n/知识库问答" 
+                response_message = "你己切换到 【插件问答】 状态。其它状态命令：\n/聊天\n/网站问答\n/文档问答\n/知识库问答" 
 
             # 命令： /我的状态 
             elif command_name in ("/我的状态", f"{at_string} /我的状态"):
@@ -525,7 +528,7 @@ def message_action(data):
                     response_message = asyncio.run(run_chain(retriever, source_id, query, current_state))
 
                 # 当状态为插件问答
-                if current_state == "插件问答" and command_parts is None:
+                if current_state == "插件问答":
                     post_type =  data["post_type"]
                     query = get_response_from_plugins(name_space, post_type, current_state, data)
                     # 执行问答
