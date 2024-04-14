@@ -614,7 +614,7 @@ def event_action(data):
             user_data_path = os.path.join(data_path, user_id)
         
         # 启动文件解读
-        if current_state == "聊天":
+        if current_state not in ("文档问答","知识库问答"):
             file_path_temp = f"{user_data_path}_chat_temp_{user_id}"
             response_message = download_file(file_url, file_name, file_path_temp, allowed_extensions=allowed_extensions)
             question = "请用中文进行解读，并输出一个总结"
