@@ -222,6 +222,40 @@ async def chat_generic_langchain(source_id, query, user_state="聊天"):
     #     response_message = f"通用聊天 chat_generic_langchain 错误：{e}"
         
     return response_message
+# 生成器格式
+async def chat_generic_langchain_yield(source_id, query, user_state="聊天"):
+    # 长度限制100个字符
+    chunk_size = 100
+    data = fetch_chat_history(source_id, user_state)
+    chat_history = get_chat_history(data)
+    prompt = ChatPromptTemplate.from_template("""
+        你是一个热心的人，尽力为人们解答各种问题。请回答下面的问题：
+        {chat_history}
+        {question}
+    """)
+    
+    # 创建链，将历史记录传递给链
+    chain = {
+        "question": RunnablePassthrough(), 
+        "chat_history": lambda x: chat_history,
+    } | prompt | llm | StrOutputParser()  
+    
+    # 调用链进行问答
+    response_message=""
+    tmp=""
+    for i in  chain.stream(query):
+        tmp+=i
+        if len(tmp)> chunk_size:
+            yield tmp
+            response_message+=tmp
+            tmp=""
+       if tmp:
+           yield tmp
+           response_message+=tmp
+    # 处理聊天记录 
+    await do_chat_history(chat_history, source_id, query, response_message, user_state)
+   
+    
 
 
 
