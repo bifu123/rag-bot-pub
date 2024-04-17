@@ -241,7 +241,12 @@ try:
     # 清除原来的聊天历史
     delete_all_records(source_id, user_state)
     query = f"{loader}\n{question}"
-    response_message = asyncio.run(chat_generic_langchain(source_id, query, user_state))
+
+    # response_message = asyncio.run(chat_generic_langchain(source_id, query, user_state))
+    # 生成器处理消息测试
+    # for response_message in  chat_generic_langchain_yield(source_id, query, user_state):
+    #     asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
+
 except Exception as e:
     response_message = f"错误：{e}"
 
