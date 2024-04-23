@@ -154,7 +154,7 @@ def get_chat_history(data) -> list:
     print("*" * 50)
     print(f"以前聊天记录大小：{history_size_old}")
     for item in data:
-        res.append({"query": item[0], "answer": item[1]+'<|end_of_text|>'})
+        res.append({"query": item[0], "answer": item[1]})
         print("*" * 50)
         print(f"以前聊天记录：{res}")
     return res
@@ -162,9 +162,9 @@ def get_chat_history(data) -> list:
 # 处理聊天记录
 async def do_chat_history(chat_history, source_id, query, answer, user_state):
     # 插入当前数据表 source_id、query、result
-    insert_chat_history(source_id, query, answer.replace('<|end_of_text|>',''), user_state)
+    insert_chat_history(source_id, query, answer, user_state)
     # 将聊天记录入旧归档记录表history_old.xlsx表中
-    insert_chat_history_xlsx(source_id, query, answer.replace('<|end_of_text|>',''), user_state)
+    insert_chat_history_xlsx(source_id, query, answer, user_state)
     # 当聊天记录数量超过2048时，删除数据库记录表history_now中时间最晚的两条记录
     history_size_now = sys.getsizeof(f"{chat_history}")
     print("*" * 50)
@@ -176,58 +176,65 @@ async def do_chat_history(chat_history, source_id, query, answer, user_state):
 
 # 向量检索聊天（执行向量链）
 async def run_chain(retriever, source_id, query, user_state="聊天"):
-    print("*" * 50)
-    print("当前使用的知识库LLM：", llm_rag)
-    template_cn = """请根据上下文和对话历史记录完整地用中文回答问题。Please answer the question completely in Chinese based on the context and conversation history.
-    {context}
-    {question}
-    """
-    # 从数据库中提取source_id的聊天记录
-    data = fetch_chat_history(source_id, user_state)
-    chat_history = get_chat_history(data)
+	try:
+	    print("*" * 50)
+	    print("当前使用的知识库LLM：", llm_rag)
+	    template_cn = """请根据上下文和对话历史记录完整地用中文回答问题。Please answer the question completely in Chinese based on the context and conversation history.
+	    {context}
+	    {question}
+	    """
+	    # 从数据库中提取source_id的聊天记录
+	    data = fetch_chat_history(source_id, user_state)
+	    chat_history = get_chat_history(data)
 
-    # 由模板生成prompt
-    prompt = ChatPromptTemplate.from_template(template_cn) 
-    # 创建chain
-    chain = RunnableMap({
-        "context": lambda x: retriever.get_relevant_documents(x["question"]),
-        "question": RunnablePassthrough(),
-        "chat_history": lambda x: chat_history  # 使用历史记录的步骤
-    }) | prompt | llm_rag | StrOutputParser()
-    # 执行问答
-    request = {"question": query}
-    response_message = chain.invoke(request)
-    # 处理聊天记录 
-    await do_chat_history(chat_history, source_id, query, response_message, user_state)
-    # 返回结果
-    return response_message
+	    # 由模板生成prompt
+	    prompt = ChatPromptTemplate.from_template(template_cn) 
+	    # 创建chain
+	    chain = RunnableMap({
+	        "context": lambda x: retriever.get_relevant_documents(x["question"]),
+	        "question": RunnablePassthrough(),
+	        "chat_history": lambda x: chat_history  # 使用历史记录的步骤
+	    }) | prompt | llm_rag | StrOutputParser()
+	    # 执行问答
+	    request = {"question": query}
+	    response_message = chain.invoke(request)
+	    # 处理聊天记录 
+	    await do_chat_history(chat_history, source_id, query, response_message, user_state)
+	    # 返回结果
+	    return response_message
+	except Exception as e:
+		return f"run_chain 错误：{e}"
+
 
 # 通用聊天
 async def chat_generic_langchain(source_id, query, user_state="聊天"):
-    print("*" * 50)
-    print("当前使用的聊天LLM：", llm)
-    # 从数据库中提取 source_id 的聊天记录
-    data = fetch_chat_history(source_id, user_state)
-    chat_history = get_chat_history(data)
-    # 由模板生成 prompt
-    prompt = ChatPromptTemplate.from_template("""
-        你是一个热心的人，尽力为人们解答问题。You are a helpful person, please try doing your best to answer any qestion in Chinese, Don't use any other language.
-        {chat_history}
-        {question}
-    """)
-    
-    # 创建链，将历史记录传递给链
-    chain = {
-        "question": RunnablePassthrough(), 
-        "chat_history": lambda x: chat_history,
-    } | prompt | llm | StrOutputParser()  
+	try:
+	    print("*" * 50)
+	    print("当前使用的聊天LLM：", llm)
+	    # 从数据库中提取 source_id 的聊天记录
+	    data = fetch_chat_history(source_id, user_state)
+	    chat_history = get_chat_history(data)
+	    # 由模板生成 prompt
+	    prompt = ChatPromptTemplate.from_template("""
+	        你是一个热心的人，尽力为人们解答问题。You are a helpful person, please try doing your best to answer any qestion in Chinese, Don't use any other language.
+	        {chat_history}
+	        {question}
+	    """)
+	    
+	    # 创建链，将历史记录传递给链
+	    chain = {
+	        "question": RunnablePassthrough(), 
+	        "chat_history": lambda x: chat_history,
+	    } | prompt | llm | StrOutputParser()  
 
-    # 调用链进行问答
-    response_message = f"{chain.invoke(query)}"
-    # 处理聊天记录 
-    await do_chat_history(chat_history, source_id, query, response_message, user_state)
-        
-    return response_message
+	    # 调用链进行问答
+	    response_message = f"{chain.invoke(query)}"
+	    # 处理聊天记录 
+	    await do_chat_history(chat_history, source_id, query, response_message, user_state)
+	        
+	    return response_message
+	except Exception as e:
+		return f"chat_generic_langchain 错误：{e}"
 
 
 
