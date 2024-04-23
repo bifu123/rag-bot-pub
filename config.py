@@ -31,10 +31,10 @@ allowed_extensions = [
 ]
 
 # go-cqhttp Websocket 监听地址
-ws_url = "ws://192.168.66.29:25522"  # 根据go-cqhttp配置文件中的地址修改
+ws_url = "ws://127.0.0.1:25522"  # 根据go-cqhttp配置文件中的地址修改
 
 # go-cqhttp http API接口地址
-http_url = "http://192.168.66.29:25533" # 根据go-cqhttp配置文件中的地址修改
+http_url = "http://127.0.0.1:25533" # 根据go-cqhttp配置文件中的地址修改
 
 # 源文档路径 
 data_path = "./data"
