@@ -1,11 +1,11 @@
 import sqlite3
 import threading
 import os
+import json
 
 from openpyxl import Workbook
 from openpyxl import load_workbook
 from datetime import datetime
-
 
 # 创建一个全局的数据库连接池
 db_lock = threading.Lock()
@@ -28,6 +28,14 @@ def get_database_connection():
             conn = sqlite3.connect(DATABASE_FILE)
             db_connections[thread_id] = conn
     return db_connections[thread_id]
+
+# 从 commands.json 文件中读取命令数据
+def read_commands_from_json(file_name):
+    with open(file_name, 'r', encoding='utf-8') as file:
+        commands_json = json.load(file)
+    return commands_json
+
+commands_json = read_commands_from_json('commands.json') # 读取命令数据
 
 def create_tables(connection):
     cursor = connection.cursor()
@@ -60,21 +68,60 @@ def create_tables(connection):
                         user_state TEXT DEFAULT '聊天'
                     )''')
     
+    
+    # 删除所有命令表
+    cursor.execute('''DROP TABLE IF EXISTS command_main''')
+    cursor.execute('''DROP TABLE IF EXISTS params''')
+    
+    # 创建命令表
+    cursor.execute('''CREATE TABLE IF NOT EXISTS command_main (
+                        id INTEGER PRIMARY KEY,
+                        command_name TEXT NOT NULL,
+                        params_num INTEGER NOT NULL,
+                        command_code TEXT NOT NULL
+                    )''')
+
+    # 创建参数表
+    cursor.execute('''CREATE TABLE IF NOT EXISTS params (
+                        id INTEGER PRIMARY KEY,
+                        command_id INTEGER NOT NULL,
+                        param_name TEXT NOT NULL,
+                        keyword TEXT NOT NULL,
+                        get_value TEXT,
+                        re TEXT,
+                        user_state TEXT,
+                        FOREIGN KEY(command_id) REFERENCES command_main(id)
+                    )''')
+    
+    # 创建用户锁状态表
+    cursor.execute('''CREATE TABLE IF NOT EXISTS user_lock_states (
+                    user_id TEXT,
+                    source_id TEXT,
+                    user_state TEXT,
+                    receive_params_num INTEGER DEFAULT 0,
+                    lock_state INTEGER DEFAULT 0)''')
+
+
+    # 插入命令数据
+    for command in commands_json:
+        cursor.execute('''INSERT INTO command_main (command_name, params_num, command_code)
+                          VALUES (?, ?, ?)''', (command['command_name'], command['params_num'], command['command_code']))
+        command_id = cursor.lastrowid
+        
+        # 插入参数数据
+        for param in command['params']:
+            param_name, param_info = list(param.items())[0]
+            cursor.execute('''INSERT INTO params (command_id, param_name, keyword, get_value, re)
+                              VALUES (?, ?, ?, ?, ?)''', 
+                           (command_id, param_name, param_info['keyword'], param_info.get('get_value', ''), param_info.get('re', '')))
+    
     connection.commit()
-
-
-# def get_database_connection():
-#     thread_id = threading.get_ident()
-#     if thread_id not in db_connections:
-#         db_connections[thread_id] = sqlite3.connect('users.db')
-#     return db_connections[thread_id]
 
 def close_database_connection():
     thread_id = threading.get_ident()
     if thread_id in db_connections:
         db_connections[thread_id].close()
         del db_connections[thread_id]
-
 
 # 函数用于获取用户状态
 def get_user_state(user_id, source_id):
@@ -87,6 +134,7 @@ def get_user_state(user_id, source_id):
             return result[0]
         else:
             return "聊天"
+
 # 函数用于切换用户状态
 def switch_user_state(user_id, source_id, new_state):
     with db_lock:
@@ -95,6 +143,70 @@ def switch_user_state(user_id, source_id, new_state):
         cursor.execute('''INSERT OR REPLACE INTO user_states (user_id, source_id, state)
                           VALUES (?, ?, ?)''', (user_id, source_id, new_state))
         conn.commit()
+        
+        
+# 函数用于获取用户锁状态
+def get_user_lock_state(user_id, source_id, user_state):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        cursor.execute('''SELECT lock_state FROM user_lock_states WHERE user_id = ? and source_id = ? and user_state = ?''', (user_id, source_id, user_state))
+        result = cursor.fetchone()
+        if result:
+            return int(result[0])
+        else:
+            return 0
+        
+# 函数用于获取用户己接收参数数量
+def get_user_receive_param_num(user_id, source_id, user_state):
+    table_name = f"current_command_{user_id}_{source_id}"
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        cursor.execute(f'''SELECT count(*) FROM {table_name} 
+                       WHERE user_id = ? 
+                       AND source_id = ? 
+                       AND user_state = ? 
+                       AND LENGTH(get_value) > 0''', (user_id, source_id, user_state))
+        result = cursor.fetchone()
+        if result:
+            return int(result[0])
+        else:
+            return 0
+
+
+# 函数用于切换用户锁状态
+def switch_user_lock(user_id, source_id, user_state, lock_state:int):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        
+        # 尝试更新现有记录的lock_state
+        cursor.execute('''UPDATE user_lock_states 
+                        SET lock_state = ?
+                        WHERE user_id = ? AND source_id = ? AND user_state = ?''', 
+                    (lock_state, user_id, source_id, user_state))
+        
+        # 如果没有符合条件的记录，插入新记录
+        if cursor.rowcount == 0:
+            cursor.execute('''INSERT INTO user_lock_states (user_id, source_id, user_state, lock_state)
+                              VALUES (?, ?, ?, ?)''', 
+                           (user_id, source_id, user_state, lock_state))
+        
+        conn.commit()
+
+# 函数用于更新用户接收参数数量
+def update_user_receive_param_num(receive_params_num, user_id, source_id, user_state):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        
+        cursor.execute('''UPDATE user_lock_states 
+                        SET receive_params_num = ?
+                        WHERE user_id = ? AND source_id = ? AND user_state = ?''', 
+                    (receive_params_num, user_id, source_id, user_state))
+        conn.commit()
+
 
 # 函数用于获取用户插件命名空间
 def get_user_name_space(user_id, source_id):
@@ -107,7 +219,7 @@ def get_user_name_space(user_id, source_id):
             return result[0]
         else:
             return "test"
-        
+  
 # 函数用于切换用户插件命名空间
 def switch_user_name_space(user_id, source_id, name_space):
     with db_lock:
@@ -220,13 +332,12 @@ def insert_chat_history_xlsx(source_id, query, answer,user_state="聊天"):
     ws.append([source_id, query, answer, datetime.now(), user_state])
     wb.save(filename)
 
-
 def delete_oldest_records():
     # 从当前聊天历史记录表中删除时间最晚的两条记录
     with db_lock:
         conn = get_database_connection()
         cursor = conn.cursor()
-        sql = "DELETE FROM history_now WHERE id IN (SELECT id FROM history_now ORDER BY timestamp ASC LIMIT 2);"
+        sql = "DELETE FROM history_now WHERE id IN (SELECT id FROM history_now ORDER BY timestamp ASC LIMIT 1);"
         cursor.execute(sql)
         conn.commit()
 
@@ -244,14 +355,168 @@ def fetch_chat_history(source_id, user_state):
         conn = get_database_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT query, answer FROM history_now WHERE source_id = ? and user_state = ?", (source_id, user_state))
+            cursor.execute("SELECT query, answer FROM history_now WHERE source_id = ? and user_state = ? ORDER BY timestamp DESC", (source_id, user_state))
             return cursor.fetchall()
         except:
             return []
+        
+# 获得自定义命令列表
+def get_custom_command_list():
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        rows = []
+        try:
+            cursor.execute("SELECT * FROM command_main")
+            command_content = cursor.fetchall()
+            if not command_content:
+                return [],[]
+            else:
+                for row in command_content:
+                    rows.append(row[1])
+                return rows, command_content
+
+        except sqlite3.Error as e:
+            print(f"Error checking custom command name: {e}")
+            return [], []
+
+# 获得自定义命令内容
+def get_custom_command_name(command_name):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        try:
+            cursor.execute("SELECT * FROM command_main WHERE command_name = ?",(command_name,))
+            command_content = cursor.fetchall()
+            if not command_content:
+                return None
+            else:
+                return command_content
+
+        except sqlite3.Error as e:
+            print(f"Error get_custom_command_name: {e}")
+            return None
+
+# 清除当前命令表
+def drop_current_command_table(command_name, user_id, source_id, user_state):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+    
+        table_name = f"current_command_{user_id}_{source_id}"
+        try:
+            # # 删除符合条件的数据
+            # cursor.execute(f'''DELETE FROM {table_name} 
+            #                 WHERE command_name = ? 
+            #                 AND source_id = ? 
+            #                 AND user_id = ? 
+            #                 AND user_state = ?''',
+            #             (command_name, source_id, user_id, user_state))
+            #             # 删除符合条件的数据
+            cursor.execute(f'''DELETE FROM {table_name}''')
+            print(f"删除表 {table_name} 记录成功。")
+        except:
+            print(f"删除表 {table_name} 记录失败。")
+  
+# 复制命令参数
+def copy_params_for_command(command_name, user_id, source_id, user_state):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+
+        # Fetch parameters for the given command_name
+        cursor.execute('''SELECT param_name, keyword, get_value, re, user_state FROM params 
+                          WHERE command_id IN (SELECT id FROM command_main WHERE command_name = ?)''', (command_name,))
+        params = cursor.fetchall()
+
+        # Create a new table name for storing parameters
+        table_name = f"current_command_{user_id}_{source_id}"
+
+        # Create the new table
+        try:
+            cursor.execute(f'''CREATE TABLE IF NOT EXISTS {table_name} (
+                                id INTEGER PRIMARY KEY,
+                                command_name TEXT,
+                                param_name TEXT,
+                                keyword TEXT,
+                                get_value TEXT,
+                                re TEXT,
+                                user_state TEXT,
+                                user_id TEXT,
+                                source_id TEXT
+                            )''')
+            print(f"Table {table_name} created successfully.")
+        except sqlite3.Error as e:
+            print(f"Error creating table {table_name}: {e}")
+
+        # Insert parameters into the new table
+        try:
+            # print(params)
+            for param in params:
+                cursor.execute(f'''INSERT INTO {table_name} (command_name, param_name, keyword, get_value, re, user_state, user_id, source_id)
+                                  VALUES (?, ?, ?, ?, ?, ?, ?, ?)''', 
+                               (command_name, param[0], param[1],param[2],param[3],user_state, user_id, source_id))
+            conn.commit()
+            print(f"Parameters copied successfully for command {command_name}.")
+        except sqlite3.Error as e:
+            print(f"Error inserting parameters for command {command_name}: {e}")
+
+# 获得用户当前自定义命令
+def fetch_user_current_command(command_name, user_id, source_id, user_state):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        table_name = f"current_command_{user_id}_{source_id}"
+        try:
+            cursor.execute(f'''SELECT * FROM {table_name} 
+                           WHERE command_name = ? 
+                           and user_id = ? 
+                           and source_id = ? 
+                           and user_state = ?
+                           and keyword != ""
+                           and (get_value = "" or get_value is null)
+                           order by id
+                           LIMIT 1''', 
+                           (command_name, user_id, source_id, user_state))
+            return cursor.fetchone()
+        except:
+            return []
+
+# 执行不返回结果的sql
+def command_handler(sql):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        cursor.execute(sql)
+        conn.commit()
+        
+# 执行返回结果的查询（多条记录）
+def select_handler_all(sql):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        cursor.execute(sql)
+        results = cursor.fetchall()
+        if not results:
+            return None
+        else:
+            return results
+        
+# 执行返回结果的查询（一条记录）
+def select_handler_one(sql):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        cursor.execute(sql)
+        results = cursor.fetchone()
+        try:
+            if not results:
+                return None
+            else:
+                return results
+        except:
+            return None
 
 
-
-
-# # 示例调用
-# update_db_path("415135222", r"D:\projects\rag-bot\chroma_db\415135222_1")
-# print(get_path_by_source_id("415135222"))
+        
+        

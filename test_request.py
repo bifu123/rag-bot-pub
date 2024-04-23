@@ -29,7 +29,7 @@ while True:
     }
 
     # 发送POST请求
-    response = requests.post("http://127.0.0.1:25533/send_private_msg", json=data2)
+    response = requests.post("http://127.0.0.1:25533/send_private_msg", json=data1)
 
 
     # 显示返回数据

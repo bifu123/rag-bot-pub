@@ -92,8 +92,13 @@ async def answer_action(chat_type, user_id, group_id, at, response_message):
             "message": f"{user_id} 发送了未知类型消息"
         } 
   
+  
+  
     # 如果是在config.py中允许的类型就发送消息  
-    if chat_type in chat_type_allow and response_message != "" and response_message is not None:
+    if response_message == "" or response_message is None:
+        pass
+    
+    elif chat_type in chat_type_allow:
         async with aiohttp.ClientSession() as session:
             async with session.post(url, params=params) as response:
                 # 检查响应状态码
@@ -101,3 +106,5 @@ async def answer_action(chat_type, user_id, group_id, at, response_message):
                     print("=" * 40, "\n消息已成功发送\n\n")
                 else:
                     print("=" * 40, "\n发送消息时出错:\n\n", await response.text())
+    else:
+        pass

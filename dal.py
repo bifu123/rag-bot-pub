@@ -14,8 +14,9 @@ import subprocess
 # 从文件导入
 from models_load import *
 from send import *
-from sqlite_helper import *
+from commands import *
 from models_load import *
+
 
 # 文档加工
 from langchain_community.document_loaders import DirectoryLoader, UnstructuredWordDocumentLoader, UnstructuredHTMLLoader, UnstructuredMarkdownLoader, PythonLoader 
@@ -158,7 +159,18 @@ def get_name_space(text):
     else:
         return False, None
 
+# # 匹配自定义命令
+# def get_custom_command(text):
+#     # 使用正则表达式进行匹配 //任意字符
+#     pattern = r'//(.+?)'
+#     matches = re.findall(pattern, text)
 
+#     # 如果匹配成功，返回字符和 True
+#     if matches:
+#         command = matches[0]
+#         return True, command
+#     else:
+#         return False, None
 # 加载插件、构建query的函数
 def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
     # 存储每个函数的结果
@@ -223,6 +235,7 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
     query = f"{result}" + f"{message}"
     return query
 
+
 # 获取当前用户状态
 def get_user_state_from_db(user_id, source_id):
     # 获取当前用户状态
@@ -231,6 +244,16 @@ def get_user_state_from_db(user_id, source_id):
         user_state = "聊天"
         switch_user_state(user_id, source_id, "聊天")
     return user_state
+
+# 获得自定义命令
+def get_custom_commands(message):
+    sql = '''SELECT command_name FROM command_main'''
+    try:
+        results = select_handler_all(sql)
+        return select_handler_all(sql)[0][0]
+    except:
+        return []
+
 
 #**************** 消息处理 ********************************************
 def message_action(data):
@@ -296,7 +319,6 @@ def message_action(data):
     command_name = command_parts[0]
     print("="*40, "\n",f"当前命令：{command_name}") 
 
-
     # 如果字符中包含URL，但不包含图片则启动URL解读
     matches = get_image(message)[0]
     print("是否包含图片：", matches)  
@@ -320,248 +342,279 @@ def message_action(data):
     is_name_space_command, name_space_command = get_name_space(message)
     print("*" * 40 + "\n" + f"是否包含命名空间命令：{is_name_space_command}, 命令：{name_space_command}")
 
+    
+    current_state = get_user_state_from_db(user_id, source_id)
+    current_lock_state = get_user_lock_state(user_id, source_id, current_state)
+    print("当前锁状态：", current_lock_state)
+    
 
     # 在允许回复的聊天类型中处理
     if chat_type in chat_type_allow and get_urls(message)[0] == "no": 
-        
-        # 切换命名空间命令
-        if is_name_space_command == True:
-            delete_all_records(source_id, user_state) # 清空聊天历史
-            name_space_command = name_space_command.replace("::", "")
-            switch_user_name_space(user_id, source_id, name_space_command)
-            print(f"已切换到 【{name_space_command}】 命名空间")
-            user_state = get_user_state_from_db(user_id, source_id)
-            response_message = f"已切换到 【{name_space_command}】 命名空间"
 
-        # 其它命令和问答
+        # 如果当前处于锁定状态
+        if current_lock_state == 1:
+            message = message.replace(at_string, "").replace(" ", "")
+            update_custom_command(message, source_id, user_id, current_state, chat_type, group_id, at)
+            response_message = ""
         else:
-            # 命令： /我的文档 
-            if command_name in ("/我的文档", f"{at_string} /我的文档"):
-                print("命令匹配！")
-                try:
-                    all_file = get_files_in_directory(embedding_data_path)
-                    files_str = "\n".join(all_file)  # 将文件列表转换为单一的字符串，每个文件路径占一行
-                    if len(files_str) > 0:
-                        if chat_type in ("group_at", "group"):
-                            response_message = "以下是你们的知识库文档：\n\n" + files_str + "\n\n如果要删除，请输使用删除命令： /删除文档|完整路径的文件名"
-                        else:
-                            response_message = "以下是你的知识库文档：\n\n" + files_str + "\n\n如果要删除，请输使用删除命令： /删除文档|完整路径的文件名"
-                    else:
-                        response_message = "你还没有文档，请先给我发送你的文档。（必须在【文档问答】或者【知识库问答】状态下，我才会保存）"
-                except:
-                    response_message = "你还没有文档，请先给我发送你的文档。（必须在【文档问答】或者【知识库问答】状态下，我才会保存）"
+            # 如果包含自定义命令
+            custom_commands_list = get_custom_command_list()[0]
+            print("自定义命令：", custom_commands_list)
 
-            # 命令： /删除文档 
-            elif command_name in ("/删除文档", f"{at_string} /删除文档"):
-                # 取得文件名
-                try:
-                    file_path = command_parts[1]
-                    if os.path.exists(file_path):
-                        os.remove(file_path)
-                        response_message = f"文件 '{file_path}' 已成功删除。注：聊天软件里的同名文档不会被清除，请手动删除"
-                    else:
-                        response_message = f"文件 '{file_path}' 不存在，无法删除"
-                except:
-                    response_message = "命令错误"
+            # 切换命名空间命令
+            if is_name_space_command == True:
+                user_state = get_user_state_from_db(user_id, source_id)
+                delete_all_records(source_id, user_state) # 清空聊天历史
+                name_space_command = name_space_command.replace("::", "")
+                switch_user_name_space(user_id, source_id, name_space_command)
+                print(f"已切换到 【{name_space_command}】 命名空间")
+                response_message = f"已切换到 【{name_space_command}】 命名空间"
 
-            # 命令： /邀请 
-            elif command_name in ("/邀请", f"{at_string} /邀请"):
-                try:
-                    # 获取命令参数
-                    tag_user_id = str(command_parts[1])
-                    tag_source_id = str(command_parts[2])
-                    tag_state = command_parts[3]
-                    try:
-                        tag_name_space = command_parts[4]
-                    except:
-                        tag_name_space = ""
-
-                    # 改变对方状态:
-                    switch_user_state(tag_user_id, tag_source_id, tag_state)
-
-                    # 改变对方命名空间
-                    if tag_name_space != "":    
-                        switch_user_name_space(tag_user_id, tag_source_id, tag_name_space)
-                        response_tag = f"【{user_id}】 邀请了你进入\n状态： 【{tag_state}】 \n命名空间：【{tag_name_space}】"
-                    else:
-                        response_tag = f"【{user_id}】 邀请了你进入\n状态： 【{tag_state}】"
-
-                    response_message =  f"已邀请"
-                    # 给对方发送通知
-                    try:
-                        asyncio.run(answer_action(chat_type, tag_user_id, group_id, at, response_tag))
-                    except:
-                        pass
-                except Exception as e:
-                    response_message = f"邀请错误：{e}"
-
-            # 命令： /清空文档 
-            elif command_name in ("/清空文档", f"{at_string} /清空文档"):
-                # 取得文件名
-                try:
-                    if os.path.exists(user_data_path):
-                        shutil.rmtree(user_data_path)
-                        response_message = f"文件 '{user_data_path}' 下所有文件已成功删除。注：聊天软件里的同名文档不会被清除，请手动删除"
-                    else:
-                        response_message = f"文件夹 '{user_data_path}' 不存在，无法删除"
-                except:
-                    response_message = "命令错误"
-                            
-            # 命令： /量化文档 
-            elif command_name in ("/量化文档", f"{at_string} /量化文档"):
-                embedding_type = "file"
-                try:
-                    # 新开窗口量化到新目录
-                    # #command = f"start /wait cmd /c \"python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at}\"" # 等待新打开的窗口执行完成
-                    # command = f"cmd /c \"python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}\"" # 不用等待新打开的窗口执行完成
-                    # # 使用 os.system() 执行命令
-                    # os.system(command)
-
-                    command = f"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}"
-                    subprocess.Popen(['start', 'cmd', '/c', command], shell=True)
-
-                    response_message = "正在量化，完成后另行通知，这期间你仍然可以使用你现在的文档知识库"
-                except Exception as e:
-                    response_message = f"量化失败：{e}"
-
-            # 命令： /量化网站 
-            elif command_name in ("/量化网站", f"{at_string} /量化网站"):
-                embedding_type = "site"
-                site_url = base64.b64encode(json.dumps(command_parts[1]).encode()).decode()
-                try:
-                    # question = "请对以上内容解读，并输出一个结论"
-                    # command = f"cmd /c \"python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}\""
-                    # os.system(command)
-                    command = f"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}"
-                    subprocess.Popen(['start', 'cmd', '/c', command], shell=True)
-                except Exception as e:
-                    print(f"URL错误：{e}")
-                response_message = "这将需要很长、很长的时间...不过你可以问我些其它事"
-
-            # 命令： /上传文档 
-            elif command_name in ("/上传文档", f"{at_string} /上传文档"):
-                # 取得文件名
-                response_message = "请直接发送文档"
-
-            # 命令： /文档问答 
-            elif command_name in ("/文档问答", f"{at_string} /文档问答"):
-                # 切换到 文档问答 状态
-                # 用数据库保存每个用户的状态
-                switch_user_state(user_id, source_id, "文档问答")
-                response_message = "你己切换到 【文档问答】 状态。其它状态命令：\n/聊天\n/网站问答\n/知识库问答"
-            
-            # 命令： /网站问答 
-            elif command_name in ("/网站问答", f"{at_string} /网站问答"):
-                # 切换到 文档问答 状态
-                # 用数据库保存每个用户的状态
-                switch_user_state(user_id, source_id, "网站问答")
-                response_message = "你己切换到 【网站问答】 状态。其它状态命令：\n/聊天\n/文档问答\n/知识库问答\n插件问答" 
-
-            # 命令： /知识库问答 
-            elif command_name in ("/知识库问答", f"{at_string} /知识库问答"):
-                # 切换到 文档问答 状态
-                # 用数据库保存每个用户的状态
-                switch_user_state(user_id, source_id, "知识库问答")
-                response_message = "你己切换到 【知识库问答】 状态。其它状态命令：\n/聊天\n/文档问答\n/网站问答\n插件问答"   
-
-            # 命令： /聊天 
-            elif command_name in ("/聊天", f"{at_string} /聊天"):
-                # 切换到 聊天 状态
-                # 用数据库保存每个用户的状态
-                switch_user_state(user_id, source_id, "聊天")
-                response_message = "你己切换到 【聊天】 状态。其它状态命令：\n/网站问答\n/文档问答\n/知识库问答\n/插件问答" 
-
-            # 命令： /插件问答
-            elif command_name in ("/插件问答", f"{at_string} /插件问答"):
-                switch_user_state(user_id, source_id, "插件问答")
-                response_message = "你己切换到 【插件问答】 状态。其它状态命令：\n/聊天\n/网站问答\n/文档问答\n/知识库问答" 
-
-            # 命令： /我的状态 
-            elif command_name in ("/我的状态", f"{at_string} /我的状态"):
-                # 从数据库中查找用户当前状态
-                current_state = get_user_state_from_db(user_id, source_id)
-                response_message = f"【{current_state}】"
-            
-            # 命令： /我的命名空间 
-            elif command_name in ("/我的命名空间", f"{at_string} /我的命名空间"):
-                # 从数据库中查找用户当前状态
-                current_state = get_user_name_space(user_id, source_id)
-                if current_state == "no":
-                    response_message = "你当前所在聊天对象中还没有插件，你可以创建插件，或用 ::命名空间 的命令切换到已有的插件命名空间"
-                else:
-                    response_message = "【" + current_state + "】"
-            
-            # 命令： /开启群消息 
-            elif command_name in ("/开启群消息", f"{at_string} /开启群消息"):
-                try:
-                    switch_allow_state(str(data["group_id"]), "on")
-                    response_message = "现在不管谁说话，我都会在群里回答，如果嫌小的话多，你就发 /关闭群消息"
-                except Exception as e:
-                    response_message = f"群消息开启失败：{e}"
-
-            # 命令： /关闭群消息 
-            elif command_name in ("/关闭群消息", f"{at_string} /关闭群消息"):
-                try:
-                    switch_allow_state(str(data["group_id"]), "off")
-                    response_message = "好的，小的先行告退，就不插嘴各位大人的聊天了，有需要时@我"
-                except Exception as e:
-                    response_message = f"群消息关闭失败：{e}"
-
-            # 命令： /清空记录 
-            elif command_name in ("/清空记录", f"{at_string} /清空记录"):
-                try:
-                    current_state = get_user_state_from_db(user_id, source_id)
-                    delete_all_records(source_id, current_state)
-                    response_message = "消息已经清空"
-                except Exception as e:
-                    response_message = f"消息清空失败：{e}"
-
-            # 和 LLM 对话
+            # 其它命令和问答
             else:
-                current_state = get_user_state_from_db(user_id, source_id) # 先检查用户状态
-                print(f"当前状态：{current_state}")
-                # 当状态为文档问答
-                if current_state == "知识库问答":
-                    # 调用RAG
-                    print(f"加载 {embedding_db_path} 的向量知识库...")
-                    retriever = load_retriever(embedding_db_path, embedding)
-                    # 准备问题
-                    query = data["message"]
-                    # 执行问答
-                    response_message = asyncio.run(run_chain(retriever, source_id, query, current_state))
+                command_name = command_name.replace(at_string, "").replace(" ", "")
+                # 命令： /我的文档 
+                if command_name in ("/我的文档", f"{at_string} /我的文档"):
+                    print("命令匹配！")
+                    try:
+                        all_file = get_files_in_directory(embedding_data_path)
+                        files_str = "\n".join(all_file)  # 将文件列表转换为单一的字符串，每个文件路径占一行
+                        if len(files_str) > 0:
+                            if chat_type in ("group_at", "group"):
+                                response_message = "以下是你们的知识库文档：\n\n" + files_str + "\n\n如果要删除，请输使用删除命令： /删除文档|完整路径的文件名"
+                            else:
+                                response_message = "以下是你的知识库文档：\n\n" + files_str + "\n\n如果要删除，请输使用删除命令： /删除文档|完整路径的文件名"
+                        else:
+                            response_message = "你还没有文档，请先给我发送你的文档。（必须在【文档问答】或者【知识库问答】状态下，我才会保存）"
+                    except:
+                        response_message = "你还没有文档，请先给我发送你的文档。（必须在【文档问答】或者【知识库问答】状态下，我才会保存）"
 
-                # 当状态为插件问答
-                if current_state == "插件问答":
-                    post_type =  data["post_type"]
-                    query = get_response_from_plugins(name_space, post_type, current_state, data)
-                    # 执行问答
-                    response_message = asyncio.run(chat_generic_langchain(source_id, query, current_state))
+                # 命令： /删除文档 
+                elif command_name in ("/删除文档", f"{at_string} /删除文档"):
+                    # 取得文件名
+                    try:
+                        file_path = command_parts[1]
+                        if os.path.exists(file_path):
+                            os.remove(file_path)
+                            response_message = f"文件 '{file_path}' 已成功删除。注：聊天软件里的同名文档不会被清除，请手动删除"
+                        else:
+                            response_message = f"文件 '{file_path}' 不存在，无法删除"
+                    except:
+                        response_message = "命令错误"
 
-                # 当状态为网站问答
-                if current_state == "网站问答":
-                    # 调用RAG
-                    print(f"加载 {embedding_db_path_site} 的向量知识库...")
-                    retriever = load_retriever(embedding_db_path_site, embedding)
-                    # 准备问题
-                    query = data["message"]
-                    # 执行问答
-                    response_message = asyncio.run(run_chain(retriever, source_id, query, current_state))
-                    #retriever.delete_collection()           
+                # 命令： /邀请1 
+                elif command_name in ("/邀请1", f"{at_string} /邀请1"):
+                    try:
+                        # 获取命令参数
+                        tag_user_id = str(command_parts[1])
+                        tag_source_id = source_id
+                        tag_state = command_parts[2]
+                        try:
+                            tag_name_space = command_parts[3]
+                        except:
+                            tag_name_space = ""
 
-                # 文档问答。文档未经过分割向量化，直接发给LLM推理
-                elif current_state == "文档问答":
-                    question = data["message"].replace(at_string, "")
-                    # command = f"cmd /c \"python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
-                    # os.system(command)
-                    command = f"conda activate rag-bot && python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}"
-                    subprocess.Popen(['start', 'cmd', '/c', command], shell=True)
+                        # 改变对方状态:
+                        switch_user_state(tag_user_id, tag_source_id, tag_state)
+
+                        # 改变对方命名空间
+                        if tag_name_space != "":    
+                            switch_user_name_space(tag_user_id, tag_source_id, tag_name_space)
+                            response_tag = f"【{user_id}】 邀请了你进入\n状态： 【{tag_state}】 \n命名空间：【{tag_name_space}】"
+                        else:
+                            response_tag = f"【{user_id}】 邀请了你进入\n状态： 【{tag_state}】"
+
+                        response_message =  f"已邀请"
+                        # 给对方发送通知
+                        try:
+                            asyncio.run(answer_action(chat_type, tag_user_id, group_id, at, response_tag))
+                        except:
+                            pass
+                    except Exception as e:
+                        response_message = f"邀请错误：{e}"
+
+                # 命令： /清空文档 
+                elif command_name in ("/清空文档", f"{at_string} /清空文档"):
+                    # 取得文件名
+                    try:
+                        if os.path.exists(user_data_path):
+                            shutil.rmtree(user_data_path)
+                            response_message = f"文件 '{user_data_path}' 下所有文件已成功删除。注：聊天软件里的同名文档不会被清除，请手动删除"
+                        else:
+                            response_message = f"文件夹 '{user_data_path}' 不存在，无法删除"
+                    except:
+                        response_message = "命令错误"
+                                
+                # 命令： /量化文档 
+                elif command_name in ("/量化文档", f"{at_string} /量化文档"):
+                    embedding_type = "file"
+                    try:
+                        # 新开窗口量化到新目录
+                        # #command = f"start /wait cmd /c \"python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at}\"" # 等待新打开的窗口执行完成
+                        # command = f"cmd /c \"python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}\"" # 不用等待新打开的窗口执行完成
+                        # # 使用 os.system() 执行命令
+                        # os.system(command)
+
+                        command = f"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}"
+                        subprocess.Popen(['start', 'cmd', '/c', command], shell=True)
+
+                        response_message = "正在量化，完成后另行通知，这期间你仍然可以使用你现在的文档知识库"
+                    except Exception as e:
+                        response_message = f"量化失败：{e}"
+
+                # 命令： /量化网站 
+                elif command_name in ("/量化网站", f"{at_string} /量化网站"):
+                    embedding_type = "site"
+                    site_url = base64.b64encode(json.dumps(command_parts[1]).encode()).decode()
+                    try:
+                        # question = "请对以上内容解读，并输出一个结论"
+                        # command = f"cmd /c \"python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}\""
+                        # os.system(command)
+                        command = f"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}"
+                        subprocess.Popen(['start', 'cmd', '/c', command], shell=True)
+                    except Exception as e:
+                        print(f"URL错误：{e}")
+                    response_message = "这将需要很长、很长的时间...不过你可以问我些其它事"
+
+                # 命令： /上传文档 
+                elif command_name in ("/上传文档", f"{at_string} /上传文档"):
+                    # 取得文件名
+                    response_message = "请直接发送文档"
+
+                # 命令： /文档问答 
+                elif command_name in ("/文档问答", f"{at_string} /文档问答"):
+                    # 切换到 文档问答 状态
+                    # 用数据库保存每个用户的状态
+                    switch_user_state(user_id, source_id, "文档问答")
+                    response_message = "你己切换到 【文档问答】 状态。其它状态命令：\n/聊天\n/网站问答\n/知识库问答"
+                
+                # 命令： /网站问答 
+                elif command_name in ("/网站问答", f"{at_string} /网站问答"):
+                    # 切换到 文档问答 状态
+                    # 用数据库保存每个用户的状态
+                    switch_user_state(user_id, source_id, "网站问答")
+                    response_message = "你己切换到 【网站问答】 状态。其它状态命令：\n/聊天\n/文档问答\n/知识库问答\n插件问答" 
+
+                # 命令： /知识库问答 
+                elif command_name in ("/知识库问答", f"{at_string} /知识库问答"):
+                    # 切换到 文档问答 状态
+                    # 用数据库保存每个用户的状态
+                    switch_user_state(user_id, source_id, "知识库问答")
+                    response_message = "你己切换到 【知识库问答】 状态。其它状态命令：\n/聊天\n/文档问答\n/网站问答\n插件问答"   
+
+                # 命令： /聊天 
+                elif command_name in ("/聊天", f"{at_string} /聊天"):
+                    # 切换到 聊天 状态
+                    # 用数据库保存每个用户的状态
+                    switch_user_state(user_id, source_id, "聊天")
+                    response_message = "你己切换到 【聊天】 状态。其它状态命令：\n/网站问答\n/文档问答\n/知识库问答\n/插件问答" 
+
+                # 命令： /插件问答
+                elif command_name in ("/插件问答", f"{at_string} /插件问答"):
+                    switch_user_state(user_id, source_id, "插件问答")
+                    response_message = "你己切换到 【插件问答】 状态。其它状态命令：\n/聊天\n/网站问答\n/文档问答\n/知识库问答" 
+
+                # 命令： /我的状态 
+                elif command_name in ("/我的状态", f"{at_string} /我的状态"):
+                    # 从数据库中查找用户当前状态
+                    current_state = get_user_state_from_db(user_id, source_id)
+                    response_message = f"【{current_state}】"
+                
+                # 命令： /我的命名空间 
+                elif command_name in ("/我的命名空间", f"{at_string} /我的命名空间"):
+                    # 从数据库中查找用户当前状态
+                    current_state = get_user_name_space(user_id, source_id)
+                    if current_state == "no":
+                        response_message = "你当前所在聊天对象中还没有插件，你可以创建插件，或用 ::命名空间 的命令切换到已有的插件命名空间"
+                    else:
+                        response_message = "【" + current_state + "】"
+                
+                # 命令： /开启群消息 
+                elif command_name in ("/开启群消息", f"{at_string} /开启群消息"):
+                    try:
+                        switch_allow_state(str(data["group_id"]), "on")
+                        response_message = "现在不管谁说话，我都会在群里回答，如果嫌小的话多，你就发 /关闭群消息"
+                    except Exception as e:
+                        response_message = f"群消息开启失败：{e}"
+
+                # 命令： /关闭群消息 
+                elif command_name in ("/关闭群消息", f"{at_string} /关闭群消息"):
+                    try:
+                        switch_allow_state(str(data["group_id"]), "off")
+                        response_message = "好的，小的先行告退，就不插嘴各位大人的聊天了，有需要时@我"
+                    except Exception as e:
+                        response_message = f"群消息关闭失败：{e}"
+
+                # 命令： /清空记录 
+                elif command_name in ("/清空记录", f"{at_string} /清空记录"):
+                    try:
+                        current_state = get_user_state_from_db(user_id, source_id)
+                        delete_all_records(source_id, current_state)
+                        response_message = "消息已经清空"
+                    except Exception as e:
+                        response_message = f"消息清空失败：{e}"
+                
+                # 命令： /{自定义命令}
+                elif command_name in custom_commands_list:
+                    
+                    command_main = get_custom_command_name(command_name)
+                    print("command_main:",command_main)
+                    do_custom_command(command_name, source_id, user_id, current_state, command_main, chat_type, group_id, at)
                     response_message = ""
 
-                # 聊天。
+                # 和 LLM 对话
                 else:
-                    query = f'{data["message"]}'
-                    response_message = asyncio.run(chat_generic_langchain(source_id, query, current_state))
-                
+                    current_state = get_user_state_from_db(user_id, source_id) # 先检查用户状态
+                    print(f"当前状态：{current_state}")
+                    
+                    # 当状态为命令等待
+                    if current_state == "命令等待":
+                        update_custom_command(message, source_id, user_id, current_state, chat_type, group_id, at) # 更新自定义命令
+                        response_message = ""
+                    
+                    # 当状态为文档问答
+                    elif current_state == "知识库问答":
+                        # 调用RAG
+                        print(f"加载 {embedding_db_path} 的向量知识库...")
+                        retriever = load_retriever(embedding_db_path, embedding)
+                        # 准备问题
+                        query = data["message"]
+                        # 执行问答
+                        response_message = asyncio.run(run_chain(retriever, source_id, query, current_state))
+
+                    # 当状态为插件问答
+                    elif current_state == "插件问答":
+                        post_type =  data["post_type"]
+                        query = get_response_from_plugins(name_space, post_type, current_state, data)
+                        # 执行问答
+                        response_message = asyncio.run(chat_generic_langchain(source_id, query, current_state))
+
+                    # 当状态为网站问答
+                    elif current_state == "网站问答":
+                        # 调用RAG
+                        print(f"加载 {embedding_db_path_site} 的向量知识库...")
+                        retriever = load_retriever(embedding_db_path_site, embedding)
+                        # 准备问题
+                        query = data["message"]
+                        # 执行问答
+                        response_message = asyncio.run(run_chain(retriever, source_id, query, current_state))
+                        #retriever.delete_collection()           
+
+                    # 文档问答。文档未经过分割向量化，直接发给LLM推理
+                    elif current_state == "文档问答":
+                        question = data["message"].replace(at_string, "")
+                        # command = f"cmd /c \"python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
+                        # os.system(command)
+                        command = f"conda activate rag-bot && python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}"
+                        subprocess.Popen(['start', 'cmd', '/c', command], shell=True)
+                        response_message = ""
+
+                    # 聊天。
+                    else:
+                        query = f'{data["message"]}'
+                        response_message = asyncio.run(chat_generic_langchain(source_id, query, current_state))
+            
+                        
         # 发送消息
         print("="*40, "\n",f"答案：{response_message}")    
         try: 

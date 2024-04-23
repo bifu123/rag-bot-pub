@@ -1,5 +1,5 @@
 '''
-本脚本向您演示了一个 串行模式 下的插件编写方式、脚本用几个函数分别收集了有关元龙居士的信息，最后交与LLM大模型综合推理
+本脚本向您演示了一个并行模式 下的插件编写方式、脚本用几个函数分别收集了有关元龙居士的信息，最后交与LLM大模型综合推理
 '''
 
 ################ 参数说明 #################
@@ -51,7 +51,7 @@ def fun_1(data):
     return msg
 
 # 插件函数示例2
-@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=4, block=True)
+@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=4)
 def fun_2(data):
     msg = f"他喜欢国学文化、创办了元龙山寨"
     return msg
@@ -63,7 +63,7 @@ def fun_3(data):
     return msg
 
 # 插件函数示例4
-@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=6)
+@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=6, block=True)
 def fun_3(data):
     msg = f"他的头发是白的"
     return msg

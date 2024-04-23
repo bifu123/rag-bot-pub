@@ -34,6 +34,8 @@ from langchain_community.llms.chatglm3 import ChatGLM3
 # kimi 模型
 from langchain_community.llms.moonshot import Moonshot
 
+# groq api 模型
+from langchain_groq import ChatGroq
 
 # 异步函数
 import asyncio
@@ -46,6 +48,7 @@ import asyncio
 os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
 os.environ['DASHSCOPE_API_KEY'] = DASHSCOPE_API_KEY
 os.environ["MOONSHOT_API_KEY"] = MOONSHOT_API_KEY
+os.environ["GROQ_API_KEY"] = GROQ_API_KEY
 ############################# 量化模型 #################################
 # 本地量化模型
 embedding_ollama = OllamaEmbeddings(
@@ -80,6 +83,11 @@ llm_kimi = Moonshot(
     model_name = llm_kimi_conf["model_name"],
     temperature = llm_kimi_conf["temperature"]
 ) 
+# 在线语言模型 groq
+llm_groq = ChatGroq(
+    model_name = llm_groq_conf["model_name"],
+    temperature = llm_groq_conf["temperature"]
+) 
 # 本地语言模型 ChatGLM3
 llm_chatGLM = ChatGLM3(
     endpoint_url = llm_chatGLM_conf["endpoint_url"],
@@ -103,6 +111,8 @@ elif model_choice["llm"] == "tongyi":
     llm = llm_tongyi
 elif model_choice["llm"] == "kimi": 
     llm = llm_kimi
+elif model_choice["llm"] == "groq": 
+    llm = llm_groq
 else:
     llm = llm_chatGLM
 
@@ -115,6 +125,8 @@ elif model_choice["llm_rag"] == "tongyi":
     llm_rag = llm_tongyi
 elif model_choice["llm_rag"] == "kimi": 
     llm_rag = llm_kimi
+elif model_choice["llm_rag"] == "groq": 
+    llm_rag = llm_groq
 else:
     llm_rag = llm_chatGLM
 
@@ -142,7 +154,7 @@ def get_chat_history(data) -> list:
     print("*" * 50)
     print(f"以前聊天记录大小：{history_size_old}")
     for item in data:
-        res.append({"query": item[0], "answer": item[1]})
+        res.append({"query": item[0], "answer": item[1]+'<|end_of_text|>'})
         print("*" * 50)
         print(f"以前聊天记录：{res}")
     return res
@@ -150,9 +162,9 @@ def get_chat_history(data) -> list:
 # 处理聊天记录
 async def do_chat_history(chat_history, source_id, query, answer, user_state):
     # 插入当前数据表 source_id、query、result
-    insert_chat_history(source_id, query, answer, user_state)
+    insert_chat_history(source_id, query, answer.replace('<|end_of_text|>',''), user_state)
     # 将聊天记录入旧归档记录表history_old.xlsx表中
-    insert_chat_history_xlsx(source_id, query, answer, user_state)
+    insert_chat_history_xlsx(source_id, query, answer.replace('<|end_of_text|>',''), user_state)
     # 当聊天记录数量超过2048时，删除数据库记录表history_now中时间最晚的两条记录
     history_size_now = sys.getsizeof(f"{chat_history}")
     print("*" * 50)
@@ -166,16 +178,14 @@ async def do_chat_history(chat_history, source_id, query, answer, user_state):
 async def run_chain(retriever, source_id, query, user_state="聊天"):
     print("*" * 50)
     print("当前使用的知识库LLM：", llm_rag)
-    template_cn = """请根据上下文和对话历史记录完整地回答问题:
+    template_cn = """请根据上下文和对话历史记录完整地用中文回答问题。Please answer the question completely in Chinese based on the context and conversation history.
     {context}
     {question}
     """
     # 从数据库中提取source_id的聊天记录
     data = fetch_chat_history(source_id, user_state)
-    if data:
-        chat_history = get_chat_history(data)
-    else:
-        chat_history = []
+    chat_history = get_chat_history(data)
+
     # 由模板生成prompt
     prompt = ChatPromptTemplate.from_template(template_cn) 
     # 创建chain
@@ -199,11 +209,9 @@ async def chat_generic_langchain(source_id, query, user_state="聊天"):
     # 从数据库中提取 source_id 的聊天记录
     data = fetch_chat_history(source_id, user_state)
     chat_history = get_chat_history(data)
-    # 聊天
-    # try:
     # 由模板生成 prompt
     prompt = ChatPromptTemplate.from_template("""
-        你是一个热心的人，尽力为人们解答各种问题。请回答下面的问题：
+        你是一个热心的人，尽力为人们解答问题。You are a helpful person, please try doing your best to answer any qestion in Chinese, Don't use any other language.
         {chat_history}
         {question}
     """)
@@ -218,8 +226,6 @@ async def chat_generic_langchain(source_id, query, user_state="聊天"):
     response_message = f"{chain.invoke(query)}"
     # 处理聊天记录 
     await do_chat_history(chat_history, source_id, query, response_message, user_state)
-    # except Exception as e:
-    #     response_message = f"通用聊天 chat_generic_langchain 错误：{e}"
         
     return response_message
 

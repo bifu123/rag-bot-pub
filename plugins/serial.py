@@ -51,18 +51,18 @@ def fun_add_1(data={}): # 第一个函数的参数必须为字典类型
     return msg
 
 # 子函数示例2
-@fun_add(name_space="test", function_type="serial", post_type="message", user_state="插件问答", priority=1, block=True)
+@fun_add(name_space="test", function_type="serial", post_type="message", user_state="插件问答", priority=1)
 def fun_add_2(data):
     global msg
     msg += 1
     return msg
 
 # 子函数示例3
-@fun_add(name_space="test", function_type="serial", post_type="message", user_state="插件问答", priority=2)
+@fun_add(name_space="test", function_type="serial", post_type="message", user_state="插件问答", priority=2, block=True)
 def fun_add_3(data):
     global msg
     msg += 1
-    return msg
+    return f"每头猪的价钱是：{msg}元"
 
 
 

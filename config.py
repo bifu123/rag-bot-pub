@@ -31,10 +31,10 @@ allowed_extensions = [
 ]
 
 # go-cqhttp Websocket 监听地址
-ws_url = "ws://127.0.0.1:25522"  # 根据go-cqhttp配置文件中的地址修改
+ws_url = "ws://192.168.66.29:25522"  # 根据go-cqhttp配置文件中的地址修改
 
 # go-cqhttp http API接口地址
-http_url = "http://127.0.0.1:25533" # 根据go-cqhttp配置文件中的地址修改
+http_url = "http://192.168.66.29:25533" # 根据go-cqhttp配置文件中的地址修改
 
 # 源文档路径 
 data_path = "./data"
@@ -46,27 +46,32 @@ chunk_size = 800
 chunk_overlap = 128
 
 # 保存聊天记录的大小
-chat_history_size_set = 8192 # 记录越大，每次发给大模型分析的数据越多，上下文越全面。但是会增加响应的时间，而且随着话题的多样复杂，会降低大模型分析的精准度
+chat_history_size_set = 4096 # 记录越大，每次发给大模型分析的数据越多，上下文越全面。但是会增加响应的时间，而且随着话题的多样复杂，会降低大模型分析的精准度
 
 # 量化后数据保存路径
 db_path = "./chroma_db"
 
 # gemini api key 
-GOOGLE_API_KEY = "your GOOGLE_API_KEY" #gemini api key的申请地址：https://makersuite.google.com/app/prompts/new_freeform ，条件：拥有google帐号
+GOOGLE_API_KEY = "AIzaSyBgKE09ReHYbG2lqC_YmdsbEjF8yQGWadsf" #gemini api key的申请地址：https://makersuite.google.com/app/prompts/new_freeform ，条件：拥有google帐号
 
 # 通义千问 api key
-DASHSCOPE_API_KEY  = "your DASHSCOPE_API_KEY"
+DASHSCOPE_API_KEY  = "sk-7d48078fa897417c9cfdsfad95f9a"
 
 # moonshot ai kimi api key
-MOONSHOT_API_KEY = "your MOONSHOT_API_KEY" # 在这里申请: https://platform.moonshot.cn/console/api-keys
+MOONSHOT_API_KEY = "sk-iIiYG1GyHKH66c0Rsdfas3UQzF20wZ0nOD6AX35FJk" # 在这里申请: https://platform.moonshot.cn/console/api-keys
+
+# moonshot ai kimi api key
+MOONSHOT_API_KEY = "sk-iIiYG1GyHKH66c0Rag0PTH3UQzcsdfsAX35FJk" # 在这里申请: https://platform.moonshot.cn/console/api-keys
+
+GROQ_API_KEY = "gsk_o2e2QnH16Eu3FNSQAezlWsdfasdfsfsafxWEQJOucQWIdHZD8mAVjY" # 在这里申请: https://console.groq.com/keys
 
 # 附赠我的 gemini 聊天 API：
-GMI_SERVER = 'http://107.175.206.30:5001/chat'
+GMI_SERVER = 'http://107.175.206.30:5003/chat'
 
 # 模型配置 
 ## 本地量化模型
 embedding_ollama_conf = {
-    "base_url": "http://192.168.66.26:11434", 
+    "base_url": "http://192.168.66.24:11434", 
     "model": "mofanke/dmeta-embedding-zh" # nomic-embed-text | mofanke/dmeta-embedding-zh
 }
 ## goole量化模型
@@ -76,7 +81,7 @@ embedding_google_conf = {
 ## 本地语言模型 
 llm_ollama_conf = {
     "base_url": "http://192.168.66.26:11434", 
-    "model": "qwen:7b"
+    "model": "llama3:8b" # qwen:7b | llama3:8b | llama3-chinese:8b
 }
 ## 线上google gemini语言模型
 llm_gemini_conf = {
@@ -94,6 +99,11 @@ llm_kimi_conf = {
     "model_name": "moonshot-v1-128k",
     "temperature": 0.3
 } 
+## 线上 groq api 语言模型
+llm_groq_conf = {
+    "model_name": "llama3-70b-8192", # llama3-70b-8192 | mixtral-8x7b-32768
+    "temperature": 0.3
+} 
 # 本地 chatGLM3-6b
 llm_chatGLM_conf = {
     "endpoint_url": "http://192.168.66.26:8000/v1/chat/completions",
@@ -105,11 +115,10 @@ model_choice = {
     # 本地向量模型
     "embedding":"ollama", # embedding: ollama | google
     # 聊天模型
-    "llm": "tongyi", # llm: ollama | gemini | tongyi | chatglm | kimi
+    "llm": "ollama", # llm: ollama | gemini | tongyi | chatglm | kimi | groq
     # 知识库模型
     "llm_rag": "ollama" # llm: ollama | gemini | tongyi | chatglm | kimi 
 }
-
 
 
 
