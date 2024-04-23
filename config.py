@@ -52,18 +52,15 @@ chat_history_size_set = 4096 # 记录越大，每次发给大模型分析的数�
 db_path = "./chroma_db"
 
 # gemini api key 
-GOOGLE_API_KEY = "AIzaSyBgKE09ReHYbG2lqC_YmdsbEjF8yQGWadsf" #gemini api key的申请地址：https://makersuite.google.com/app/prompts/new_freeform ，条件：拥有google帐号
+GOOGLE_API_KEY = "your GOOGLE_API_KEY" #gemini api key的申请地址：https://makersuite.google.com/app/prompts/new_freeform ，条件：拥有google帐号
 
 # 通义千问 api key
-DASHSCOPE_API_KEY  = "sk-7d48078fa897417c9cfdsfad95f9a"
+DASHSCOPE_API_KEY  = "your DASHSCOPE_API_KEY"
 
 # moonshot ai kimi api key
-MOONSHOT_API_KEY = "sk-iIiYG1GyHKH66c0Rsdfas3UQzF20wZ0nOD6AX35FJk" # 在这里申请: https://platform.moonshot.cn/console/api-keys
+MOONSHOT_API_KEY = "your MOONSHOT_API_KEY" # 在这里申请: https://platform.moonshot.cn/console/api-keys
 
-# moonshot ai kimi api key
-MOONSHOT_API_KEY = "sk-iIiYG1GyHKH66c0Rag0PTH3UQzcsdfsAX35FJk" # 在这里申请: https://platform.moonshot.cn/console/api-keys
-
-GROQ_API_KEY = "gsk_o2e2QnH16Eu3FNSQAezlWsdfasdfsfsafxWEQJOucQWIdHZD8mAVjY" # 在这里申请: https://console.groq.com/keys
+GROQ_API_KEY = "your GROQ_API_KEY" # 在这里申请: https://console.groq.com/keys
 
 # 附赠我的 gemini 聊天 API：
 GMI_SERVER = 'http://107.175.206.30:5003/chat'
@@ -115,7 +112,7 @@ model_choice = {
     # 本地向量模型
     "embedding":"ollama", # embedding: ollama | google
     # 聊天模型
-    "llm": "ollama", # llm: ollama | gemini | tongyi | chatglm | kimi | groq
+    "llm": "tongyi", # llm: ollama | gemini | tongyi | chatglm | kimi | groq
     # 知识库模型
     "llm_rag": "ollama" # llm: ollama | gemini | tongyi | chatglm | kimi 
 }
