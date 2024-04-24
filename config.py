@@ -1,8 +1,8 @@
 # 机器人 QQ 号
-bot_qq = "123456789"
+bot_qq = "3152246598"
 
 # 管理员 QQ 号
-admin_qq = "987654321"
+admin_qq = "415135222"
 
 # 允许的聊天回复
 chat_type_allow = [
@@ -52,15 +52,15 @@ chat_history_size_set = 4096 # 记录越大，每次发给大模型分析的数�
 db_path = "./chroma_db"
 
 # gemini api key 
-GOOGLE_API_KEY = "your GOOGLE_API_KEY" #gemini api key的申请地址：https://makersuite.google.com/app/prompts/new_freeform ，条件：拥有google帐号
+GOOGLE_API_KEY = "YOUR GOOGLE_API_KEY" #gemini api key的申请地址：https://makersuite.google.com/app/prompts/new_freeform ，条件：拥有google帐号
 
 # 通义千问 api key
-DASHSCOPE_API_KEY  = "your DASHSCOPE_API_KEY"
+DASHSCOPE_API_KEY  = "YOUR DASHSCOPE_API_KEY"
 
 # moonshot ai kimi api key
-MOONSHOT_API_KEY = "your MOONSHOT_API_KEY" # 在这里申请: https://platform.moonshot.cn/console/api-keys
+MOONSHOT_API_KEY = "YOUR MOONSHOT_API_KEY" # 在这里申请: https://platform.moonshot.cn/console/api-keys
 
-GROQ_API_KEY = "your GROQ_API_KEY" # 在这里申请: https://console.groq.com/keys
+GROQ_API_KEY = "YOUR GROQ_API_KEY" # 在这里申请: https://console.groq.com/keys
 
 # 附赠我的 gemini 聊天 API：
 GMI_SERVER = 'http://107.175.206.30:5003/chat'
@@ -78,7 +78,7 @@ embedding_google_conf = {
 ## 本地语言模型 
 llm_ollama_conf = {
     "base_url": "http://192.168.66.26:11434", 
-    "model": "llama3:8b" # qwen:7b | llama3:8b | llama3-chinese:8b
+    "model": "llama3:8b" # qwen:7b | llama3:8b | llama3-chinese:8b 
 }
 ## 线上google gemini语言模型
 llm_gemini_conf = {
@@ -98,7 +98,7 @@ llm_kimi_conf = {
 } 
 ## 线上 groq api 语言模型
 llm_groq_conf = {
-    "model_name": "llama3-70b-8192", # llama3-70b-8192 | mixtral-8x7b-32768
+    "model_name": "mixtral-8x7b-32768", # llama3-70b-8192 | mixtral-8x7b-32768
     "temperature": 0.3
 } 
 # 本地 chatGLM3-6b
@@ -111,12 +111,14 @@ llm_chatGLM_conf = {
 model_choice = {
     # 本地向量模型
     "embedding":"ollama", # embedding: ollama | google
+    # 本地知识库模型
+    "llm_rag": "ollama", # llm: ollama | gemini | tongyi | chatglm | kimi | groq 
     # 聊天模型
-    "llm": "tongyi", # llm: ollama | gemini | tongyi | chatglm | kimi | groq
-    # 知识库模型
-    "llm_rag": "ollama" # llm: ollama | gemini | tongyi | chatglm | kimi 
+    "llm": "ollama", # llm: ollama | gemini | tongyi | chatglm | kimi | groq
 }
 
+# 是否强制非聊天状态时，一律使用本地知识库模型
+must_use_llm_rag = False # True | False # 当文档较大时，建议设置为True。因为在线 API 模型在处理本地文档时Tocken大小有限制，二是考虑到费用问题，当然你可结合自身的需求和实际情况而定
 
 
 

@@ -41,12 +41,12 @@ def create_tables(connection):
     cursor = connection.cursor()
     # 创建用户状态表
     cursor.execute('''CREATE TABLE IF NOT EXISTS user_states (
-                      user_id TEXT PRIMARY KEY,
+                      user_id TEXT,
                       source_id TEXT,
                       state TEXT)''')
     # 创建用户命名空间表
     cursor.execute('''CREATE TABLE IF NOT EXISTS user_name_space (
-                      user_id TEXT PRIMARY KEY,
+                      user_id TEXT,
                       source_id TEXT,
                       name_space TEXT DEFAULT 'test')''')
     # 创建群消息开关状态表
@@ -65,7 +65,8 @@ def create_tables(connection):
                         query TEXT NOT NULL,
                         answer TEXT NOT NULL,
                         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-                        user_state TEXT DEFAULT '聊天'
+                        user_state TEXT DEFAULT '聊天',
+                        name_space TEXT
                     )''')
     
     
@@ -135,14 +136,29 @@ def get_user_state(user_id, source_id):
         else:
             return "聊天"
 
-# 函数用于切换用户状态
 def switch_user_state(user_id, source_id, new_state):
     with db_lock:
         conn = get_database_connection()
         cursor = conn.cursor()
-        cursor.execute('''INSERT OR REPLACE INTO user_states (user_id, source_id, state)
-                          VALUES (?, ?, ?)''', (user_id, source_id, new_state))
+        
+        # 首先检查是否已存在符合条件的记录
+        cursor.execute('''SELECT * FROM user_states 
+                          WHERE user_id = ? AND source_id = ?''', (user_id, source_id))
+        existing_record = cursor.fetchone()
+        
+        if existing_record:
+            # 如果存在，则更新状态
+            cursor.execute('''UPDATE user_states 
+                              SET state = ?
+                              WHERE user_id = ? AND source_id = ?''', (new_state, user_id, source_id))
+        else:
+            # 如果不存在，则插入新记录
+            cursor.execute('''INSERT INTO user_states (user_id, source_id, state)
+                              VALUES (?, ?, ?)''', (user_id, source_id, new_state))
+        
         conn.commit()
+
+
         
         
 # 函数用于获取用户锁状态
@@ -225,9 +241,24 @@ def switch_user_name_space(user_id, source_id, name_space):
     with db_lock:
         conn = get_database_connection()
         cursor = conn.cursor()
-        cursor.execute('''INSERT OR REPLACE INTO user_name_space (user_id, source_id, name_space)
-                          VALUES (?, ?, ?)''', (user_id, source_id, name_space))
+        
+        # 首先检查是否已存在具有相同 user_id 和 source_id 的记录
+        cursor.execute('''SELECT * FROM user_name_space 
+                          WHERE user_id = ? AND source_id = ?''', (user_id, source_id))
+        existing_record = cursor.fetchone()
+        
+        if existing_record:
+            # 如果存在，则更新命名空间
+            cursor.execute('''UPDATE user_name_space 
+                              SET name_space = ?
+                              WHERE user_id = ? AND source_id = ?''', (name_space, user_id, source_id))
+        else:
+            # 如果不存在，则插入新记录
+            cursor.execute('''INSERT INTO user_name_space (user_id, source_id, name_space)
+                              VALUES (?, ?, ?)''', (user_id, source_id, name_space))
+        
         conn.commit()
+
 
 # 函数用于获取群消息开关状态
 def get_allow_state_from_db(group_id):
@@ -308,22 +339,22 @@ def get_path_by_source_id_site(source_id):
         else:
             return None
 
-def insert_chat_history(source_id, query, answer, user_state):
+def insert_chat_history(source_id, query, answer, user_state, name_space=""):
     # 插入当前聊天历史记录
     with db_lock:
         conn = get_database_connection()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO history_now (source_id, query, answer, user_state) VALUES (?, ?, ?, ?)", (source_id, query, answer, user_state))
+        cursor.execute("INSERT INTO history_now (source_id, query, answer, user_state, name_space) VALUES (?, ?, ?, ?, ?)", (source_id, query, answer, user_state, name_space))
         conn.commit()
 
-def insert_chat_history_xlsx(source_id, query, answer,user_state="聊天"):
+def insert_chat_history_xlsx(source_id, query, answer,user_state="聊天", name_space=""):
     # 检查文件是否存在
     filename = 'history_old.xlsx'
     if not os.path.isfile(filename):
         # 如果文件不存在，创建新文件并写入表头
         wb = Workbook()
         ws = wb.active
-        ws.append(["source_iD", "query", "answer", "create_time", "user_state"])
+        ws.append(["source_iD", "query", "answer", "create_time", "user_state", "name_space"])
         wb.save(filename)
 
     # 打开工作簿并插入新记录
@@ -332,30 +363,36 @@ def insert_chat_history_xlsx(source_id, query, answer,user_state="聊天"):
     ws.append([source_id, query, answer, datetime.now(), user_state])
     wb.save(filename)
 
-def delete_oldest_records():
-    # 从当前聊天历史记录表中删除时间最晚的两条记录
+def delete_oldest_records(source_id, user_state, name_space=""):
+    # 从当前聊天历史记录表中删除时间最晚的1条记录
     with db_lock:
         conn = get_database_connection()
         cursor = conn.cursor()
-        sql = "DELETE FROM history_now WHERE id IN (SELECT id FROM history_now ORDER BY timestamp ASC LIMIT 1);"
-        cursor.execute(sql)
+        sql = '''DELETE FROM history_now 
+                 WHERE source_id = ? 
+                 AND user_state = ? 
+                 AND name_space = ?
+                 AND id IN (SELECT id FROM history_now ORDER BY timestamp ASC LIMIT 1);'''
+        cursor.execute(sql, (source_id, user_state, name_space))
         conn.commit()
 
-def delete_all_records(source_id, user_state):
+
+def delete_all_records(source_id, user_state, name_space):
     # 从当前聊天历史记录表中删除符合条件的所有记录
     with db_lock:
         conn = get_database_connection()
         cursor = conn.cursor()
-        cursor.execute("DELETE FROM history_now WHERE source_id = ? and user_state = ?", (source_id, user_state))
+        sql = "DELETE FROM history_now WHERE source_id = ? and user_state = ? and name_space = ?"
+        cursor.execute(sql, (source_id, user_state, name_space))
         conn.commit()
 
-def fetch_chat_history(source_id, user_state):
+def fetch_chat_history(source_id, user_state, name_space):
     # 从数据库中提取聊天历史记录
     with db_lock:
         conn = get_database_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT query, answer FROM history_now WHERE source_id = ? and user_state = ? ORDER BY timestamp DESC", (source_id, user_state))
+            cursor.execute("SELECT query, answer FROM history_now WHERE source_id = ? and user_state = ? and name_space = ? ORDER BY timestamp DESC", (source_id, user_state, name_space))
             return cursor.fetchall()
         except:
             return []

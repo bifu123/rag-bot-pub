@@ -228,6 +228,7 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
     
     # 将所有结果组合起来
     result = "\n".join(results)
+    result = result.replace("None", "").replace("\n\n", "\n")
 
     # 输出结果
     print(f"插件返回结果：{result}")
@@ -242,7 +243,7 @@ def get_user_state_from_db(user_id, source_id):
     user_state = get_user_state(user_id, source_id)
     if user_state is None:
         user_state = "聊天"
-        switch_user_state(user_id, source_id, "聊天")
+        switch_user_state(user_id, source_id, user_state)
     return user_state
 
 # 获得自定义命令
@@ -327,11 +328,17 @@ def message_action(data):
         try:
             question = "请用中文对以上内容解读，并输出一个结论"
 
-            # command = f"cmd /c \"python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" 
-            # os.system(command)
+            # 判断操作系统类型
+            if sys.platform.startswith('win'):
+                # Windows 上的命令
+                command = f"start cmd /c \"conda activate rag-bot && python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\""
+            elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
+                # Linux 或 macOS 上的命令
+                command = f"gnome-terminal -- bash -c 'conda activate rag-bot && python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}; exec bash'"
 
-            command = f"start cmd /c \"conda activate rag-bot && python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\""
+            # 执行命令
             subprocess.Popen(command, shell=True)
+
 
         except Exception as e:
             print(f"URL错误：{e}")
@@ -364,7 +371,7 @@ def message_action(data):
             # 切换命名空间命令
             if is_name_space_command == True:
                 user_state = get_user_state_from_db(user_id, source_id)
-                delete_all_records(source_id, user_state) # 清空聊天历史
+                delete_all_records(source_id, user_state, name_space) # 清空聊天历史
                 name_space_command = name_space_command.replace("::", "")
                 switch_user_name_space(user_id, source_id, name_space_command)
                 print(f"已切换到 【{name_space_command}】 命名空间")
@@ -449,14 +456,15 @@ def message_action(data):
                 elif command_name in ("/量化文档", f"{at_string} /量化文档"):
                     embedding_type = "file"
                     try:
-                        # 新开窗口量化到新目录
-                        # #command = f"start /wait cmd /c \"python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at}\"" # 等待新打开的窗口执行完成
-                        # command = f"cmd /c \"python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}\"" # 不用等待新打开的窗口执行完成
-                        # # 使用 os.system() 执行命令
-                        # os.system(command)
-
-                        command = f"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}"
-                        subprocess.Popen(['start', 'cmd', '/c', command], shell=True)
+                        # 判断操作系统类型
+                        if sys.platform.startswith('win'):
+                            # Windows 上的命令
+                            command = f"start cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}"
+                        elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
+                            # Linux 或 macOS 上的命令
+                            command = f"gnome-terminal -- bash -c 'conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}'"   
+                        # 执行命令
+                        subprocess.Popen(command, shell=True)
 
                         response_message = "正在量化，完成后另行通知，这期间你仍然可以使用你现在的文档知识库"
                     except Exception as e:
@@ -467,11 +475,15 @@ def message_action(data):
                     embedding_type = "site"
                     site_url = base64.b64encode(json.dumps(command_parts[1]).encode()).decode()
                     try:
-                        # question = "请对以上内容解读，并输出一个结论"
-                        # command = f"cmd /c \"python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}\""
-                        # os.system(command)
-                        command = f"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}"
-                        subprocess.Popen(['start', 'cmd', '/c', command], shell=True)
+                        # 判断操作系统类型
+                        if sys.platform.startswith('win'):
+                            # Windows 上的命令
+                            command = f"start cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}"
+                        elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
+                            # Linux 或 macOS 上的命令
+                            command = f"gnome-terminal -- bash -c 'conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}'"
+                        # 执行命令
+                        subprocess.Popen(command, shell=True)
                     except Exception as e:
                         print(f"URL错误：{e}")
                     response_message = "这将需要很长、很长的时间...不过你可以问我些其它事"
@@ -522,12 +534,10 @@ def message_action(data):
                 
                 # 命令： /我的命名空间 
                 elif command_name in ("/我的命名空间", f"{at_string} /我的命名空间"):
-                    # 从数据库中查找用户当前状态
-                    current_state = get_user_name_space(user_id, source_id)
-                    if current_state == "no":
+                    if name_space == "no":
                         response_message = "你当前所在聊天对象中还没有插件，你可以创建插件，或用 ::命名空间 的命令切换到已有的插件命名空间"
                     else:
-                        response_message = "【" + current_state + "】"
+                        response_message = "【" + name_space + "】"
                 
                 # 命令： /开启群消息 
                 elif command_name in ("/开启群消息", f"{at_string} /开启群消息"):
@@ -549,7 +559,7 @@ def message_action(data):
                 elif command_name in ("/清空记录", f"{at_string} /清空记录"):
                     try:
                         current_state = get_user_state_from_db(user_id, source_id)
-                        delete_all_records(source_id, current_state)
+                        delete_all_records(source_id, current_state, name_space)
                         response_message = "消息已经清空"
                     except Exception as e:
                         response_message = f"消息清空失败：{e}"
@@ -580,14 +590,14 @@ def message_action(data):
                         # 准备问题
                         query = data["message"]
                         # 执行问答
-                        response_message = asyncio.run(run_chain(retriever, source_id, query, current_state))
+                        response_message = asyncio.run(run_chain(retriever, source_id, query, current_state, name_space))
 
                     # 当状态为插件问答
                     elif current_state == "插件问答":
                         post_type =  data["post_type"]
                         query = get_response_from_plugins(name_space, post_type, current_state, data)
                         # 执行问答
-                        response_message = asyncio.run(chat_generic_langchain(source_id, query, current_state))
+                        response_message = asyncio.run(chat_generic_langchain(source_id, query, current_state, name_space))
 
                     # 当状态为网站问答
                     elif current_state == "网站问答":
@@ -597,22 +607,28 @@ def message_action(data):
                         # 准备问题
                         query = data["message"]
                         # 执行问答
-                        response_message = asyncio.run(run_chain(retriever, source_id, query, current_state))
+                        response_message = asyncio.run(run_chain(retriever, source_id, query, current_state, name_space))
                         #retriever.delete_collection()           
 
                     # 文档问答。文档未经过分割向量化，直接发给LLM推理
                     elif current_state == "文档问答":
                         question = data["message"].replace(at_string, "")
-                        # command = f"cmd /c \"python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
-                        # os.system(command)
-                        command = f"conda activate rag-bot && python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}"
-                        subprocess.Popen(['start', 'cmd', '/c', command], shell=True)
+                        
+                        if sys.platform.startswith('win'):
+                        # Windows 上的命令
+                            command = f"start cmd /c \"conda activate rag-bot && python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}"
+                        elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
+                            # Linux 或 macOS 上的命令
+                            command = f"gnome-terminal -- bash -c 'conda activate rag-bot && python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}'"
+                        # 执行命令
+                        subprocess.Popen(command, shell=True)
+                        
                         response_message = ""
 
                     # 聊天。
                     else:
                         query = f'{data["message"]}'
-                        response_message = asyncio.run(chat_generic_langchain(source_id, query, current_state))
+                        response_message = asyncio.run(chat_generic_langchain(source_id, query, current_state, name_space))
             
                         
         # 发送消息
@@ -673,11 +689,15 @@ def event_action(data):
         if current_state not in ("文档问答","知识库问答"):
             file_path_temp = f"{user_data_path}_chat_temp_{user_id}"
             response_message = download_file(file_url, file_name, file_path_temp, allowed_extensions=allowed_extensions)
-            question = "请用中文进行解读，并输出一个总结"
-            # command = f"cmd /c \"python docs_chat.py {file_path_temp} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\"" # 不用等待新打开的窗口执行完成
-            # os.system(command)
-            command = f"conda activate rag-bot && python docs_chat.py {file_path_temp} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}"
-            subprocess.Popen(['start', 'cmd', '/c', command], shell=True)
+            question = "请仔细阅读"
+            
+            # 判断操作系统类型
+            if sys.platform.startswith('win'):
+                command = f"start cmd /c \"conda activate rag-bot && python docs_chat.py {file_path_temp} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}"
+            elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
+                command = f"gnome-terminal -- bash -c 'conda activate rag-bot && python docs_chat.py {file_path_temp} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}'"
+            # 执行命令
+            subprocess.Popen(command, shell=True)
 
             response_message = ""
         else:
@@ -690,7 +710,7 @@ def event_action(data):
             post_type =  data["post_type"]
             query = get_response_from_plugins(name_space, post_type, current_state, data)
             # 执行问答
-            response_message = asyncio.run(chat_generic_langchain(source_id, query, current_state))
+            response_message = asyncio.run(chat_generic_langchain(source_id, query, current_state, name_space))
         else:
             response_message = f"{notice_type}"
     

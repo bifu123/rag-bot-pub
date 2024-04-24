@@ -236,12 +236,14 @@ print(loader)
 # # print(f"答案： {response_message}")
 
 
+name_space = get_user_name_space(user_id, source_id)
+
 # 调用通用聊天得出答案
 try:
     # 清除原来的聊天历史
-    delete_all_records(source_id, user_state)
+    delete_all_records(source_id, user_state, name_space)
     query = f"{loader}\n{question}"
-    response_message = asyncio.run(chat_generic_langchain(source_id, query, user_state))
+    response_message = asyncio.run(chat_generic_langchain(source_id, query, user_state, name_space))
 except Exception as e:
     response_message = f"错误：{e}"
 
@@ -254,6 +256,16 @@ asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
 
 
 
+
+
+# # 在任务完成后等待一段时间，然后关闭窗口
+# time.sleep(4)  # 4 秒钟的等待时间，可以根据实际情况调整
+
+# # 根据不同的操作系统执行不同的关闭窗口命令
+# if sys.platform.startswith('win'):
+#     os.system('taskkill /f /im cmd.exe')  # 关闭 Windows 命令行窗口
+# elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
+#     os.system('pkill -f Terminal')  # 关闭 Linux 或 macOS 终端窗口
 
 
 
