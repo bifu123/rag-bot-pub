@@ -275,7 +275,19 @@ def message_action(data):
     print("="*40)
     print(f"chat_type:{chat_type}\nat:{at}\nuser_id:{user_id}\ngroup_id:{group_id}")
 
+    
+    message = data["message"]
+    print("="*40, "\n",f"问题：{message}")
+    
+    # 组装文件路径
+    try:
+        # 群文件路径名
+        user_data_path = os.path.join(data_path, "group_" + str(data["group_id"]))
+    except:
+        # 用户文件路径名
+        user_data_path = os.path.join(data_path, user_id)
 
+    user_db_path = os.path.join(db_path, user_id)
     
     # 确定用户数据库目录和文档目录
     if chat_type in ("group_at", "group"):
@@ -288,18 +300,6 @@ def message_action(data):
         embedding_data_path = user_data_path
         embedding_db_path_tmp = user_db_path
         embedding_db_path_tmp_site = user_db_path + "_site"
-
-    # 组装文件路径
-    message = data["message"]
-    print("="*40, "\n",f"问题：{message}")
-    try:
-        # 群文件路径名
-        user_data_path = os.path.join(data_path, "group_" + str(data["group_id"]))
-    except:
-        # 用户文件路径名
-        user_data_path = os.path.join(data_path, user_id)
-
-    user_db_path = os.path.join(db_path, user_id)
 
     # 获取name_space
     print("="*40)
