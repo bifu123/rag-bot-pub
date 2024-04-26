@@ -275,11 +275,7 @@ def message_action(data):
     print("="*40)
     print(f"chat_type:{chat_type}\nat:{at}\nuser_id:{user_id}\ngroup_id:{group_id}")
 
-    # 组装文件路径
-    message = data["message"]
-    print("="*40, "\n",f"问题：{message}")
-    user_data_path = os.path.join(data_path, user_id)
-    user_db_path = os.path.join(db_path, user_id)
+
     
     # 确定用户数据库目录和文档目录
     if chat_type in ("group_at", "group"):
@@ -292,6 +288,18 @@ def message_action(data):
         embedding_data_path = user_data_path
         embedding_db_path_tmp = user_db_path
         embedding_db_path_tmp_site = user_db_path + "_site"
+
+    # 组装文件路径
+    message = data["message"]
+    print("="*40, "\n",f"问题：{message}")
+    try:
+        # 群文件路径名
+        user_data_path = os.path.join(data_path, "group_" + str(data["group_id"]))
+    except:
+        # 用户文件路径名
+        user_data_path = os.path.join(data_path, user_id)
+
+    user_db_path = os.path.join(db_path, user_id)
 
     # 获取name_space
     print("="*40)
@@ -512,7 +520,7 @@ def message_action(data):
                     # 切换到 文档问答 状态
                     # 用数据库保存每个用户的状态
                     switch_user_state(user_id, source_id, "知识库问答")
-                    response_message = "你己切换到 【知识库问答】 状态。其它状态命令：\n/聊天\n/文档问答\n/网站问答\n插件问答"   
+                    response_message = "你己切换到 【知识库问答】 状态。其它状态命令：\n/聊天\n/文档问答\n/网站问答\n/插件问答"   
 
                 # 命令： /聊天 
                 elif command_name in ("/聊天", f"{at_string} /聊天"):
