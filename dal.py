@@ -15,7 +15,7 @@ import subprocess
 from models_load import *
 from send import *
 from commands import *
-from models_load import *
+
 
 
 # 文档加工
