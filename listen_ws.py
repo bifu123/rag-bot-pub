@@ -27,12 +27,12 @@ def handle_notice_thread(data):
 
 def handle_message(data):
     # 处理私聊消息或群聊消息
-    print("\n", "="*15, "Message","="*15, "\n", data)
+    print("\n", "="*20, "Message","="*20, "\n", data)
     message_action(data)
 
 def handle_notice(data):
     # 处理通知类型的事件
-    print("\n", "="*15, "Notice", "="*15, "\n", data)
+    print("\n", "="*20, "Notice", "="*20, "\n", data)
     event_action(data)
 
 def handle_request(data):

@@ -141,7 +141,7 @@ async def chat_gemini(wxid, content, GMI_SERVER_URL):
         response_text = requests.get(GMI_SERVER_URL).text
         json_response = json.loads(response_text)
         reply = json_response.get('reply')
-        print("="*40, "\n",type(reply), reply)
+        print("=" * 50, "\n",type(reply), reply)
         response_message = reply
     except Exception as e:
         response_message = "LLM响应错误"
@@ -173,7 +173,7 @@ async def do_chat_history(chat_history, source_id, query, answer, user_state, na
 # 向量检索聊天（执行向量链）
 async def run_chain(retriever, source_id, query, user_state="聊天", name_space="test"):
     query = query.replace(f"{at_string} ", "")
-    print("*" * 50)
+    print("=" * 50)
     print("当前使用的知识库LLM：", llm_rag)
     template_cn = """请根据上下文和对话历史记录用中文完整地回答问题 Please answer in Chinese:
     {context}
@@ -186,7 +186,7 @@ async def run_chain(retriever, source_id, query, user_state="聊天", name_space
     chat_history = format_history(data)
     
     history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}") # 如果超过预定字节大小，删除记录
-    print("*" * 50)
+    print("=" * 50)
     print(f"预计聊天记录大小：{history_size_now}\n聊天记录：\n{chat_history}")
     
     while history_size_now > chat_history_size_set:
@@ -237,7 +237,7 @@ async def chat_generic_langchain(source_id, query, user_state="聊天",name_spac
     chat_history = format_history(data)
     
     history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}") # 如果超过预定字节大小，删除记录
-    print("*" * 50)
+    print("=" * 50)
     print(f"预计聊天记录大小：{history_size_now}\n聊天记录：\n{chat_history}")
     
     while history_size_now > chat_history_size_set:
@@ -261,7 +261,7 @@ async def chat_generic_langchain(source_id, query, user_state="聊天",name_spac
         {chat_history}
         {question}
     """)
-    print("*" * 50)
+    print("=" * 50)
     
     # 创建链，将历史记录传递给链
     if user_state != "聊天" and must_use_llm_rag == True:

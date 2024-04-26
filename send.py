@@ -103,8 +103,8 @@ async def answer_action(chat_type, user_id, group_id, at, response_message):
             async with session.post(url, params=params) as response:
                 # 检查响应状态码
                 if response.status == 200:
-                    print("=" * 40, "\n消息已成功发送\n\n")
+                    print("=" * 50, "\n消息已成功发送\n\n")
                 else:
-                    print("=" * 40, "\n发送消息时出错:\n\n", await response.text())
+                    print("=" * 50, "\n发送消息时出错:\n\n", await response.text())
     else:
         pass

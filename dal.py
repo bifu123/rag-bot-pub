@@ -159,18 +159,7 @@ def get_name_space(text):
     else:
         return False, None
 
-# # 匹配自定义命令
-# def get_custom_command(text):
-#     # 使用正则表达式进行匹配 //任意字符
-#     pattern = r'//(.+?)'
-#     matches = re.findall(pattern, text)
 
-#     # 如果匹配成功，返回字符和 True
-#     if matches:
-#         command = matches[0]
-#         return True, command
-#     else:
-#         return False, None
 # 加载插件、构建query的函数
 def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
     # 存储每个函数的结果
@@ -231,7 +220,7 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
     result = result.replace("None", "").replace("\n\n", "\n")
 
     # 输出结果
-    print("*" * 50)
+    print("=" * 50)
     print(f"插件返回结果：\n{result}\n")
     # 准备问题（将从插件获取的结果与当前问题拼接成上下文供LLM推理)
     query = f"{result}" + f"\n{message}"
@@ -260,9 +249,15 @@ def get_custom_commands(message):
 #**************** 消息处理 ********************************************
 def message_action(data):
 
+    message = data["message"]
+    print("=" * 50)
+    print(f"问题：{message}")
+    
+
     # 获取当前群允许的聊天类型
     chat_type_allow = get_allow_state(data)
-    print("="*40, "\n","当前允许的聊天消息类型：", chat_type_allow)
+    print("=" * 50)
+    print(f"当前允许的聊天消息类型：{chat_type_allow}")
 
     # 判断聊天类型、获得必要参数
     '''
@@ -272,13 +267,11 @@ def message_action(data):
     at = get_chat_type(data)["at"]
     user_id = get_chat_type(data)["user_id"]
     group_id = get_chat_type(data)["group_id"]
-  
-    print("="*40)
-    print(f"chat_type:{chat_type}\nat:{at}\nuser_id:{user_id}\ngroup_id:{group_id}")
+
+    print(f"chat_type：{chat_type}\nat：{at}\nuser_id：{user_id}\ngroup_id：{group_id}")
 
     
-    message = data["message"]
-    print("="*40, "\n",f"问题：{message}")
+
     
     # 组装文件路径
     try:
@@ -303,7 +296,6 @@ def message_action(data):
         embedding_db_path_tmp_site = user_db_path + "_site"
 
     # 获取name_space
-    print("="*40)
     name_space = get_user_name_space(user_id, source_id)
     print("当前命名空间：", name_space)
 
@@ -319,15 +311,15 @@ def message_action(data):
 
 
 
-    print("="*40, "\n",f"source_id：{source_id}")     
-    print("="*40, "\n",f"当前使用的文档路径：{embedding_data_path}")
-    print("="*40, "\n",f"当前使用的数据库路径：{embedding_db_path}")
-    print("="*40, "\n",f"当前使用的网站向量路径：{embedding_db_path_site}")
+    print(f"source_id：{source_id}")     
+    print(f"当前使用的文档路径：{embedding_data_path}")
+    print(f"当前使用的数据库路径：{embedding_db_path}")
+    print(f"当前使用的网站向量路径：{embedding_db_path_site}")
 
     # 以 | 分割找出其中的命令
     command_parts = message.split("|")
     command_name = command_parts[0]
-    print("="*40, "\n",f"当前命令：{command_name}") 
+    print(f"当前命令：{command_name}") 
 
     # 如果字符中包含URL，但不包含图片则启动URL解读
     matches = get_image(message)[0]
@@ -356,12 +348,14 @@ def message_action(data):
 
     # 如果包含命名空间命令
     is_name_space_command, name_space_command = get_name_space(message)
-    print("*" * 40 + "\n" + f"是否包含命名空间命令：{is_name_space_command}, 命令：{name_space_command}")
+    print(f"是否包含命名空间命令：{is_name_space_command}, 命令：{name_space_command}")
 
     
     current_state = get_user_state_from_db(user_id, source_id)
     current_lock_state = get_user_lock_state(user_id, source_id, current_state)
     print("当前锁状态：", current_lock_state)
+
+
     
 
     # 在允许回复的聊天类型中处理
@@ -641,12 +635,12 @@ def message_action(data):
             
                         
         # 发送消息
-        print("="*40, "\n",f"答案：{response_message}")    
+        print("=" * 50, "\n",f"答案：{response_message}")    
         try: 
             asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
             # answer_action(chat_type, user_id, group_id, at, response_message)
         except Exception as e:
-            print("="*40, "\n",f"发送消息错误：{e}")
+            print("=" * 50, "\n",f"发送消息错误：{e}")
 
 
 #**************** 事件处理 ********************************************
@@ -656,7 +650,7 @@ def event_action(data):
 
     # 获取当前群允许的聊天类型
     chat_type_allow = get_allow_state(data)
-    print("="*40, "\n","当前允许的聊天消息类型：", chat_type_allow)
+    print("=" * 50, "\n","当前允许的聊天消息类型：", chat_type_allow)
 
     # 判断聊天类型、获得必要参数（函数在send.py中）
     chat_type = get_chat_type(data)["chatType"]
@@ -678,7 +672,7 @@ def event_action(data):
 
     current_state = get_user_state_from_db(user_id, source_id) # 先检查用户状态
   
-    print("="*40)
+    print("=" * 50)
     print(f"chat_type:{chat_type}\nat:{at}\nuser_id:{user_id}\ngroup_id:{group_id}\nsource_id:{source_id}\ncurrent_state:{current_state}")
    
 
@@ -723,7 +717,7 @@ def event_action(data):
         else:
             response_message = f"{notice_type}"
     
-    print("*" * 40)
+    print("=" * 50)
     print(response_message)
 
     # 发送消息
