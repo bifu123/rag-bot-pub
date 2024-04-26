@@ -196,7 +196,7 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
             functions_with_priority = [(getattr(plugin_module, func), getattr(plugin_module, func)._name_space, getattr(plugin_module, func)._priority, getattr(plugin_module, func)._function_type, getattr(plugin_module, func)._post_type, getattr(plugin_module, func)._user_state, getattr(plugin_module, func)._block) for func in dir(plugin_module) if callable(getattr(plugin_module, func)) and hasattr(getattr(plugin_module, func), '_priority')]
             
             # 根据优先级对函数进行排序
-            functions_with_priority.sort(key=lambda x: x[1])
+            functions_with_priority.sort(key=lambda x: x[2])
             
             result_serial = None  # 初始值设为None
             result_parallel = ''  # 用于并行执行的结果串联
@@ -231,9 +231,10 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
     result = result.replace("None", "").replace("\n\n", "\n")
 
     # 输出结果
-    print(f"插件返回结果：{result}")
+    print("*" * 50)
+    print(f"插件返回结果：\n{result}\n")
     # 准备问题（将从插件获取的结果与当前问题拼接成上下文供LLM推理)
-    query = f"{result}" + f"{message}"
+    query = f"{result}" + f"\n{message}"
     return query
 
 
