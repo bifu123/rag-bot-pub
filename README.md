@@ -47,6 +47,8 @@ python listen_ws.py
 
  
  ## 重要更新
+### 2024-4-29
+ - 解决分步式命令bug
  ### 2024-4-23
  - 增加了对ollama llama3的支持
  - 增加了对groq的支持
