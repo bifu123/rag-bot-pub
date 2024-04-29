@@ -114,24 +114,6 @@ def close_database_connection():
     if thread_id in db_connections:
         db_connections[thread_id].close()
         del db_connections[thread_id]
-
-#  插入自定义命令表
-def insert_custom_commands(command):
-    with db_lock:
-        conn = get_database_connection()
-        cursor = conn.cursor()
-        cursor.execute('''INSERT INTO command_main (command_name, params_num, command_code)
-                        VALUES (?, ?, ?)''', (command['command_name'], command['params_num'], command['command_code']))
-        command_id = cursor.lastrowid
-        
-        # 插入参数数据
-        for param in command['params']:
-            param_name, param_info = list(param.items())[0]
-            cursor.execute('''INSERT INTO params (command_id, param_name, keyword, get_value, re)
-                            VALUES (?, ?, ?, ?, ?)''', 
-                        (command_id, param_name, param_info['keyword'], param_info.get('get_value', ''), param_info.get('re', '')))
-        # 提交更改
-        conn.commit()
 # 初始化命令表
 def init_commands_table():
     with db_lock:
@@ -163,8 +145,6 @@ def init_commands_table():
         # 提交更改
         conn.commit()
         print("命令表初始化完成")  
-
-init_commands_table()
 
 # 函数用于获取用户状态
 def get_user_state(user_id, source_id):

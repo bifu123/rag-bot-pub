@@ -3,6 +3,10 @@ import websocket
 import json
 from config import ws_url
 from dal import *
+from sqlite_helper import init_commands_table
+
+# 初始化数据库命令表
+init_commands_table
 
 def on_message(ws, message):
     # 处理收到的消息
