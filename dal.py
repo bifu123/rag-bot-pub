@@ -221,7 +221,7 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
 
     # 输出结果
     print("=" * 50)
-    print(f"插件返回结果：\n{result}\n")
+    print(f"插件返回结果：\n\n{result}\n")
     # 准备问题（将从插件获取的结果与当前问题拼接成上下文供LLM推理)
     query = f"{result}" + f"\n{message}"
     return query
@@ -236,15 +236,23 @@ def get_user_state_from_db(user_id, source_id):
         switch_user_state(user_id, source_id, user_state)
     return user_state
 
-# 获得自定义命令
-def get_custom_commands(message):
-    sql = '''SELECT command_name FROM command_main'''
+# 从JSON文件获得所有自定义命令名称和主体
+def get_custom_commands_from_json():
     try:
-        results = select_handler_all(sql)
-        return select_handler_all(sql)[0][0]
+        command_names = [command['command_name'] for command in commands_json]
+        return command_names, commands_json
     except:
-        return []
+        return [], {}
 
+# 根据command_name获得自定义命令单条JSON
+def get_custom_commands_single(command_name, commands_json):
+    custom_commands_single = None
+    for command in commands_json:
+        if command['command_name'] == command_name:
+            custom_commands_single = command
+            break
+
+    return custom_commands_single
 
 #**************** 消息处理 ********************************************
 def message_action(data):
@@ -368,8 +376,8 @@ def message_action(data):
             response_message = ""
         else:
             # 如果包含自定义命令
-            custom_commands_list = get_custom_command_list()[0]
-            print("自定义命令：", custom_commands_list)
+            custom_commands_list = get_custom_commands_from_json()
+            print("自定义命令列表：", custom_commands_list[0])
 
             # 切换命名空间命令
             if is_name_space_command == True:
@@ -383,6 +391,7 @@ def message_action(data):
             # 其它命令和问答
             else:
                 command_name = command_name.replace(at_string, "").replace(" ", "")
+                
                 # 命令： /我的文档 
                 if command_name in ("/我的文档", f"{at_string} /我的文档"):
                     print("命令匹配！")
@@ -568,10 +577,9 @@ def message_action(data):
                         response_message = f"消息清空失败：{e}"
                 
                 # 命令： /{自定义命令}
-                elif command_name in custom_commands_list:
-                    
-                    command_main = get_custom_command_name(command_name)
-                    print("command_main:",command_main)
+                elif command_name in custom_commands_list[0]:
+                    command_main = get_custom_commands_single(command_name, custom_commands_list[1])
+                    print("自定义命令:",command_name)
                     do_custom_command(command_name, source_id, user_id, current_state, command_main, chat_type, group_id, at)
                     response_message = ""
 

@@ -5,18 +5,21 @@ import asyncio
 import aiohttp
 
 
+'''
+command_main: {'command_name': '/姓名', 'params_num': 2, 'params': [{'p1': {'keyword': '请输入你的姓', 'get_value': '', 're': ''}}, {'p2': {'keyword': '请输入你名字', 'get_value': '', 're': ''}}], 'command_code': "print(f'你的姓名是：{p1_value}{p2_value}')\nasyncio.run(answer_action(chat_type, user_id, group_id, at, f'你的姓名是：{p1_value}{p2_value}'))"}
+'''
+
 def do_custom_command(command_name, source_id, user_id, user_state, command_main, chat_type, group_id, at):
-    command_main = command_main[0]
-    command_id = command_main[0]
-    pamas_num = command_main[2]
-    command_code = command_main[3]
-    print(command_id, pamas_num, command_code)
-    
+
+    pamas_num = command_main["params_num"]
+    command_code = command_main["command_code"]
+
     drop_current_command_table(command_name, user_id, source_id, user_state) # 删除表
     copy_params_for_command(command_name, user_id, source_id, user_state) # 复制到当前用户命令表
     
     # 获得用户当前自定义命令
     q = fetch_user_current_command(command_name, user_id, source_id, user_state)
+    print(q[3])
     
     # 发送消息
     response_message = q[3]
