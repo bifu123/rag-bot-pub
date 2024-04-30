@@ -20,7 +20,7 @@ cd rag-bot-pub
 conda activate rag-bot-pub
 pip install requirements.txt
 # 如果安装 requirements.txt失败，或者安装后运行有问题，请尝试执行以下命令:
-pip install websocket-client bs4 dashscope langchain_google_genai langchain_community langchain openpyxl requests langchain_groq webdriver-manager selenium==4.9.0 python-docx
+pip install websocket-client bs4 dashscope langchain_google_genai langchain_community langchain openpyxl requests langchain_groq webdriver-manager selenium==4.9.0 python-docx "unstructured[xlsx]" 
 ```
 此外，还需要安装chrome和firefox
 windows下，直接下载安装chrome和firefox
