@@ -337,16 +337,18 @@ def message_action(data):
         try:
             question = "请用中文对以上内容解读，并输出一个结论"
 
-            # 判断操作系统类型
+
+
             if sys.platform.startswith('win'):
                 # Windows 上的命令
-                command = f"start cmd /c \"conda activate rag-bot && python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}\""
+                command = f"start cmd /c \"conda activate rag-bot && python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state} && exit\""
             elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
                 # Linux 或 macOS 上的命令
-                command = f"gnome-terminal -- bash -c 'conda activate rag-bot && python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}; exec bash'"
+                command = f"python url_chat.py {get_urls(message)[1]} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}; exit"
 
             # 执行命令
             subprocess.Popen(command, shell=True)
+
 
 
         except Exception as e:
@@ -471,10 +473,10 @@ def message_action(data):
                         # 判断操作系统类型
                         if sys.platform.startswith('win'):
                             # Windows 上的命令
-                            command = f"start cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}"
+                            command = f"start cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} && exit\""
                         elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
                             # Linux 或 macOS 上的命令
-                            command = f"gnome-terminal -- bash -c 'conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}'"   
+                            command = f"gnome-terminal -- bash -c 'python new_embedding.py {embedding_data_path} {embedding_db_path} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type}; exit'"   
                         # 执行命令
                         subprocess.Popen(command, shell=True)
 
@@ -490,10 +492,10 @@ def message_action(data):
                         # 判断操作系统类型
                         if sys.platform.startswith('win'):
                             # Windows 上的命令
-                            command = f"start cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}"
+                            command = f"start cmd /c \"conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url} && exit\""
                         elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
                             # Linux 或 macOS 上的命令
-                            command = f"gnome-terminal -- bash -c 'conda activate rag-bot && python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}'"
+                            command = f"gnome-terminal -- bash -c 'python new_embedding.py {embedding_data_path} {embedding_db_path_site} {source_id} {chat_type} {user_id} {group_id} {at} {embedding_type} {site_url}; exit'"
                         # 执行命令
                         subprocess.Popen(command, shell=True)
                     except Exception as e:
@@ -627,10 +629,10 @@ def message_action(data):
                         
                         if sys.platform.startswith('win'):
                         # Windows 上的命令
-                            command = f"start cmd /c \"conda activate rag-bot && python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}"
+                            command = f"start cmd /c \"conda activate rag-bot && python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state} && exit\""
                         elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
                             # Linux 或 macOS 上的命令
-                            command = f"gnome-terminal -- bash -c 'conda activate rag-bot && python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}'"
+                            command = f"gnome-terminal -- bash -c 'python docs_chat.py {embedding_data_path} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}; exit'"
                         # 执行命令
                         subprocess.Popen(command, shell=True)
                         
@@ -704,9 +706,9 @@ def event_action(data):
             
             # 判断操作系统类型
             if sys.platform.startswith('win'):
-                command = f"start cmd /c \"conda activate rag-bot && python docs_chat.py {file_path_temp} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}"
+                command = f"start cmd /c \"conda activate rag-bot && python docs_chat.py {file_path_temp} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state} && exit\""
             elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
-                command = f"gnome-terminal -- bash -c 'conda activate rag-bot && python docs_chat.py {file_path_temp} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}'"
+                command = f"gnome-terminal -- bash -c 'python docs_chat.py {file_path_temp} {question} {chat_type} {user_id} {group_id} {at} {source_id} {current_state}; exit'"
             # 执行命令
             subprocess.Popen(command, shell=True)
 

@@ -12,14 +12,23 @@ YLBot是一个以QQ聊天界面作为语言模型与用户交互端的RAG应用�
 ## 怎样使用
 ### [安装vs_BuildTools]https://aka.ms/vs/17/release/vs_BuildTools.exe
 ### 安装环境
-- 推荐使用conda环境安装部署，首先你得安装好conda环境
+- windows可以使用conda环境安装部署，linux不建议用
 ```bash
 conda create -n rag-bot-pub python=3.11
 git clone https://github.com/bifu123/rag-bot-pub
 cd rag-bot-pub
 conda activate rag-bot-pub
 pip install requirements.txt
+# 如果安装 requirements.txt失败，或者安装后运行有问题，请尝试执行以下命令:
+pip install websocket-client bs4 dashscope langchain_google_genai langchain_community langchain openpyxl requests langchain_groq webdriver-manager selenium==4.9.0 python-docx
 ```
+此外，还需要安装chrome和firefox
+windows下，直接下载安装chrome和firefox
+linux请用下面命令：
+```bash
+sudo apt install chromium-browser chromium-chromedriver firefox # 不过一般LINUX都预装了firefox
+```
+
 ### 修改配置文件config.py
 请根据文件中提示，结合你的实际情况修改，其中涉及了对接ollama和go-cqhttp的部分，如果不会，先补上这部分知识，可以参看我在b站上的视频，也可以加QQ群：222302526 
 
@@ -47,9 +56,11 @@ python listen_ws.py
 
  
  ## 重要更新
+### 2024-4-30
+ - 解决新开窗口运行后不会自动关闭的bug
 ### 2024-4-29
  - 解决分步式命令bug
- ### 2024-4-23
+### 2024-4-23
  - 增加了对ollama llama3的支持
  - 增加了对groq的支持
  - 增加分步式命令功能，比如：/邀请
