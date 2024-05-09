@@ -389,8 +389,11 @@ def delete_oldest_records(source_id, user_state, name_space=""):
                  WHERE source_id = ? 
                  AND user_state = ? 
                  AND name_space = ?
-                 AND id IN (SELECT id FROM history_now ORDER BY timestamp ASC LIMIT 1);'''
-        cursor.execute(sql, (source_id, user_state, name_space))
+                 AND id in (SELECT id FROM history_now 
+				     WHERE source_id = ? 
+                     AND user_state = ? 
+                     AND name_space = ? ORDER BY timestamp ASC LIMIT 1);'''
+        cursor.execute(sql, (source_id, user_state, name_space, source_id, user_state, name_space))
         conn.commit()
 
 
@@ -409,7 +412,7 @@ def fetch_chat_history(source_id, user_state, name_space):
         conn = get_database_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT query, answer FROM history_now WHERE source_id = ? and user_state = ? and name_space = ? ORDER BY timestamp DESC", (source_id, user_state, name_space))
+            cursor.execute("SELECT query, answer FROM history_now WHERE source_id = ? and user_state = ? and name_space = ? ORDER BY timestamp", (source_id, user_state, name_space))
             return cursor.fetchall()
         except:
             return []
