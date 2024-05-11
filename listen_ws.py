@@ -4,9 +4,22 @@ import json
 from config import ws_url
 from dal import *
 from sqlite_helper import init_commands_table
+import pyautogui
+import time
 
 # 初始化数据库命令表
 init_commands_table
+
+def press_enter_every_2_seconds():
+    try:
+        while True:
+            # 模拟按下回车键
+            pyautogui.press('enter')
+            # print("enter")
+            # 等待2秒
+            time.sleep(2)
+    except KeyboardInterrupt:
+        print("程序已停止")
 
 def on_message(ws, message):
     # 处理收到的消息
@@ -65,3 +78,6 @@ def create_connection():
 
 # 建立 WebSocket 连接
 create_connection()
+
+# 启动按下回车键的线程
+threading.Thread(target=press_enter_every_2_seconds).start()
