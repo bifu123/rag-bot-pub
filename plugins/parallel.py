@@ -17,6 +17,7 @@
 # data：      监听到的所有数据的json   
 # block:      是否阻断拦截，如果为Ture，将会执行完当前函数就结束，不再往下一个函数执行
 # name_space: 插件命名空间，用于精准定位到执行某一功能的一个或多个函数
+# role:       拥有执行插件权限命名空间的微信号、微信群列表
 
 # - 串行模式 serial：  所有函数结果会按照优先级执行，上一个函数结果是下一个函数的输入，最后一个函数的结果为最终结果。
 # - 并行模式 parallel：所有函数结果会按照优先级执行，所有函数必须返回一个字符类型结果（可以是""），最后结果是所有函数的拼合。
@@ -27,13 +28,14 @@
 
 
 ################# 主函数 ##################
-def fun_my_plugin(name_space, function_type, post_type, user_state, priority, block=False):
+def fun_my_plugin(name_space, function_type, post_type, user_state, priority, role=[], block=False):
     def decorator(func):
         func._name_space = name_space
         func._function_type = function_type
         func._post_type = post_type
         func._priority = priority
         func._user_state = user_state
+        func._role = role
         func._block = block
         return func
     return decorator
@@ -44,26 +46,26 @@ def fun_my_plugin(name_space, function_type, post_type, user_state, priority, bl
 
 ################# 子函数 ##################
 # 插件函数示例1
-@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=3)
+@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=3, role=["21122263971@chatroom","cbf_415135222"])
 def fun_1(data):
     msg = f"他今年45岁了"
     # 必须返回字符结果
     return msg
 
 # 插件函数示例2
-@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=4)
+@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=4, role=["21122263971@chatroom","cbf_415135222"])
 def fun_2(data):
     msg = f"元龙居士是一个养猪的人、他喜欢国学文化、创办了元龙山寨"
     return msg
 
 # 插件函数示例3
-@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=5)
+@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=5, role=["21122263971@chatroom","cbf_415135222"])
 def fun_3(data):
     msg = f"他居住的地方海拔1800米"
     return msg
 
 # 插件函数示例4
-@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=6, block=True)
+@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=6, role=["21122263971@chatroom","cbf_415135222"], block=True)
 def fun_4(data):
     msg = f"他的头发是白的"
     return msg

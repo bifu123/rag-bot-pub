@@ -154,10 +154,10 @@ def get_name_space(text):
         return False, None
 
 # 加载插件、构建query的函数
-def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
+def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data, source_id):
     # 存储每个函数的结果
     try:
-        message = str(data["message"])
+        message = data["message"]
     except:
         message = ""
 
@@ -165,6 +165,9 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
 
 
     results = []
+    result_serial = None  # 初始值设为None
+    result_parallel = ''  # 用于并行执行的结果串联
+    
     # 遍历plugins目录下的所有文件
     for filename in os.listdir(plugin_dir):
         if filename.endswith('.py'):
@@ -175,51 +178,68 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data):
             spec.loader.exec_module(plugin_module)
             
             # 获取模块中的所有函数及其优先级
-            functions_with_priority = [(getattr(plugin_module, func), getattr(plugin_module, func)._name_space, getattr(plugin_module, func)._priority, getattr(plugin_module, func)._function_type, getattr(plugin_module, func)._post_type, getattr(plugin_module, func)._user_state, getattr(plugin_module, func)._block) for func in dir(plugin_module) if callable(getattr(plugin_module, func)) and hasattr(getattr(plugin_module, func), '_priority')]
+            functions_with_priority = [
+                (
+                    getattr(plugin_module, func),
+                    getattr(plugin_module, func)._name_space,
+                    getattr(plugin_module, func)._priority,
+                    getattr(plugin_module, func)._function_type,
+                    getattr(plugin_module, func)._post_type,
+                    getattr(plugin_module, func)._user_state,
+                    getattr(plugin_module, func)._role,
+                    getattr(plugin_module, func)._block
+                )
+                for func in dir(plugin_module)
+                if callable(getattr(plugin_module, func)) and hasattr(getattr(plugin_module, func), '_priority')
+            ]
+
             
             # 根据优先级对函数进行排序
             functions_with_priority.sort(key=lambda x: x[2])
             
-            result_serial = None  # 初始值设为None
-            result_parallel = ''  # 用于并行执行的结果串联
+
             # 依次执行函数
-            for function, name_space, priority, function_type, post_type, user_state, block in functions_with_priority:
+            for function, name_space, priority, function_type, post_type, user_state, role, block in functions_with_priority:
                 # 判断function_type、post_type和user_state是否满足特定条件
                 if function_type == "serial" and post_type == post_type_p and user_state == user_state_p and name_space == name_space_p:
-                    if result_serial is None:
-                        # 如果result为None，则根据函数参数类型设定初始值
-                        if 'dict' in str(function.__annotations__.values()):
-                            result_serial = {}
-                        elif 'str' in str(function.__annotations__.values()):
-                            result_serial = ''
-                        # 可以根据其他可能的参数类型继续添加条件
-                    result_serial = function(data=result_serial)  # 将data作为参数传递给函数
-                    # 如果block=True，则结束循环，不再执行后续函数
-                    if getattr(function, '_block', True):
-                        break
+                    if source_id in role or role == []:
+                        if result_serial is None:
+                            # 如果result为None，则根据函数参数类型设定初始值
+                            if 'dict' in str(function.__annotations__.values()):
+                                result_serial = {}
+                            elif 'str' in str(function.__annotations__.values()):
+                                result_serial = ''
+                            # 可以根据其他可能的参数类型继续添加条件
+                        result_serial = function(data=result_serial)  # 将data作为参数传递给函数
+                        # 如果block=True，则结束循环，不再执行后续函数
+                        if getattr(function, '_block', True):
+                            break
+
                 elif function_type == "parallel" and post_type == post_type_p and user_state == user_state_p and name_space == name_space_p:
-                    result_parallel += f"{function(data)}"
-                    result_parallel += "\n"
+                    if source_id in role or role == []:
+                        result_parallel += f"{function(data)}"
+                        result_parallel += "\n"
 
-                    # 如果block=True，则结束循环，不再执行后续函数
-                    if getattr(function, '_block', True):
-                        break
-            
-            # 将每个函数的结果存储起来
-            results.append(f"{result_parallel}" + "\n" + f"{result_serial}")
+                        # 如果block=True，则结束循环，不再执行后续函数
+                        if getattr(function, '_block', True):
+                            break
+
     
-    # 将所有结果组合起来
-    result = "\n".join(results)
-    result = result.replace("None", "").replace("\n\n", "\n")
-
+    
+    # 将每个函数的结果存储起来
+    if result_serial is not None or result_parallel != "":
+        results.append(f"{result_parallel}" + "\n" + f"{result_serial}")
+        # 将所有结果组合起来
+        result = "\n".join(results)
+        result = result.replace("None", "").replace("\n\n", "\n")
+        # 准备问题（将从插件获取的结果与当前问题拼接成上下文供LLM推理)
+        query = f"{result}" + f"\n{message}"
+    else:
+        # 准备问题（将从插件获取的结果与当前问题拼接成上下文供LLM推理)
+        query = f'请这样对我说："没有权限访问命名空间：{name_space_p}"，不要添加你的任何理解和推理'
     # 输出结果
     print("=" * 50)
-    print(f"插件返回结果：\n\n{result}\n")
-    # 准备问题（将从插件获取的结果与当前问题拼接成上下文供LLM推理)
-    if result == "" or result is None:
-        query = f"{message}"
-    else:
-        query = f"{result}" + f"\n{message}"
+    print(f"插件请求结果：\n\n{query}\n")
     return query
 
 
@@ -626,7 +646,7 @@ def message_action(data):
                     # 当状态为插件问答
                     elif current_state == "插件问答":
                         post_type =  data["post_type"]
-                        query = get_response_from_plugins(name_space, post_type, current_state, data).replace(at_string,"")
+                        query = get_response_from_plugins(name_space, post_type, current_state, data, source_id).replace(at_string,"")
                         # 执行问答
                         response_message = asyncio.run(chat_generic_langchain(bot_nick_name, user_nick_name, source_id, query, user_state, name_space))
 
@@ -748,7 +768,7 @@ def event_action(data):
         # 当状态为插件问答
         if current_state == "插件问答":
             post_type =  data["post_type"]
-            query = get_response_from_plugins(name_space, post_type, current_state, data).replace(at_string,"")
+            query = get_response_from_plugins(name_space, post_type, current_state, data, source_id).replace(at_string,"")
             if write_all_history == 1:
                 insert_chat_history_all_xlsx(user_nick_name, source_id, query, current_state, name_space)
             
