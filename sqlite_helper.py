@@ -441,7 +441,8 @@ def insert_chat_history_all_xlsx(source_id, user, content, user_state="聊天", 
         wb.save(filename)
         print("insert_chat_history_all_xlsx写入记录")
     else:
-        print("内容为空，insert_chat_history_all_xlsx放弃写入")
+        # print("内容为空，insert_chat_history_all_xlsx放弃写入")
+        pass
 
 def delete_oldest_records(source_id, user_state, name_space=""):
     # 从当前聊天历史记录表中删除时间最晚的1条记录
