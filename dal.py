@@ -383,7 +383,7 @@ def message_action(data):
 
     # 写入聊天历史记录
     if write_all_history == 1:
-        insert_chat_history_all_xlsx(user_nick_name, source_id, message.replace(at_string, ""), user_state, name_space)
+        insert_chat_history_all_xlsx(user_nick_name, source_id, message, user_state, name_space)
 
     # 在允许回复的聊天类型中处理
     if chat_type in chat_type_allow and get_urls(message)[0] == "no": 
@@ -669,7 +669,7 @@ def message_action(data):
             asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
             # 写入聊天历史记录
             if write_all_history == 1:
-                insert_chat_history_all_xlsx(user_nick_name, source_id, response_message, current_state, name_space)
+                insert_chat_history_all_xlsx(bot_nick_name, source_id, response_message, current_state, name_space)
         except Exception as e:
             print("=" * 50, "\n",f"发送消息错误：{e}")
             
