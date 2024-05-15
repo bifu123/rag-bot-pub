@@ -439,7 +439,7 @@ def insert_chat_history_all_xlsx(source_id, user, content, user_state="聊天", 
         ws = wb.active
         ws.append([user, source_id, content,  datetime.now(), user_state, name_space])
         wb.save(filename)
-        print("insert_chat_history_all_xlsx写入记录")
+        # print("insert_chat_history_all_xlsx写入记录")
     else:
         # print("内容为空，insert_chat_history_all_xlsx放弃写入")
         pass
