@@ -1,14 +1,21 @@
 import threading
+import time
 import websocket
 import json
-from config import ws_url
-from dal import *
-from sqlite_helper import init_commands_table
 import pyautogui
-import time
+from config import ws_url, model_choice, must_use_llm_rag
+from dal import *
+from sqlite_helper import init_commands_table, init_models_table
 
 # 初始化数据库命令表
-init_commands_table
+init_commands_table()
+
+# 初始化模型表
+embedding = model_choice["embedding"]
+llm = model_choice["llm"]
+llm_rag = model_choice["llm_rag"]
+init_models_table(embedding, llm, llm_rag, must_use_llm_rag)
+
 
 def press_enter_every_2_seconds():
     try:

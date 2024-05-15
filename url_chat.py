@@ -8,7 +8,7 @@ import time
 import base64
 import re
 
-from langchain.document_loaders.sitemap import SitemapLoader # 站点地图加载 
+from langchain_community.document_loaders.sitemap import SitemapLoader # 站点地图加载 
 from langchain_community.document_loaders import WebBaseLoader # 单个URL加载
 from langchain_community.document_loaders import UnstructuredURLLoader # 多URL列表加载
 from langchain_community.document_loaders import SeleniumURLLoader
@@ -26,18 +26,11 @@ from models_load import *
 # 异步函数
 import asyncio
 
-
-
-
 print(f"接收到的参数：{sys.argv}")
-
 
 encoded_urls = sys.argv[1]
 # 将BASE64编码后的字符串解码还原为URL列表
 decode_urls = json.loads(base64.b64decode(encoded_urls).decode())
-
-
-
 
 question = sys.argv[2]
 chat_type = str(sys.argv[3])
@@ -46,12 +39,10 @@ group_id = str(sys.argv[5])
 at = str(sys.argv[6])
 source_id = str(sys.argv[7])
 user_state = str(sys.argv[8])
-
-
-
+bot_nick_name = str(sys.argv[9])
+user_nick_name = str(sys.argv[10])
 
 print("*" * 40)
-
 print("decode_urls:", decode_urls)
 print("question:", question)
 print("chat_type:", chat_type)
@@ -60,17 +51,9 @@ print("group_id:", group_id)
 print("at:", at)
 print("source_id:", source_id)
 print("user_state:", user_state)
-
-
-
-
+print("bot_nick_name:", bot_nick_name)
+print("user_nick_name:", user_nick_name)
 print("*" * 40)
-
-
-
-
-
-
 
 
 # 制作站点地图
@@ -182,28 +165,11 @@ def parse_sitemap(xml_file):
     print(f"解析完毕：{url}")
     return urls
 
-# # url列表加载-使用UnstructuredURLLoader
-# def get_loaders(urls):
-#     documents = UnstructuredURLLoader(urls=urls)
-#     loaders = documents.load()
-#     return documents
-
 # url列表加载-使用SeleniumURLLoader
 def get_loaders(urls):
     documents = SeleniumURLLoader(urls)
     loaders = documents.load()
     return loaders
-
-
-# # url列表加载-使用WebBaseLoader
-# def get_loaders(urls):
-#     documents = []
-#     for url in urls:
-#         print(f"正在加载：{url}")
-#         loader = WebBaseLoader(url)
-#         document = loader.load()
-#         documents.append(document[0])
-#     return documents
 
 # 站点地图加载
 def get_loaders_from_sitemap(sitemap_path):
@@ -212,40 +178,26 @@ def get_loaders_from_sitemap(sitemap_path):
     return documents
 
 # 加载内容
-loader = get_loaders(decode_urls)
-print(loader)
+try:
+    loader = get_loaders(decode_urls)
+    print(loader)
+except Exception as e:
+    print(f"错误：{e}")
 
-# 调用通用gemini聊天得出答案
-# # wxid = user_id
-# # content = f"{load_documents(embedding_data_path)}\n{question}"
-# # GMI_SERVER_URL = f'{GMI_SERVER}?wxid={wxid}&content={content}'
-
-# # print("*" * 40)
-# # print("正在向llm提交...")
-
-# # try:
-# #     response_text = requests.get(GMI_SERVER_URL).text
-# #     json_response = json.loads(response_text)
-# #     reply = json_response.get('reply')
-# #     print("="*40, "\n",type(reply), reply)
-# #     response_message = reply
-# # except Exception as e:
-# #     response_message = "LLM响应错误"
-
-# # print("*" * 40)
-# # print(f"答案： {response_message}")
 
 
 name_space = get_user_name_space(user_id, source_id)
+
+
 
 # 调用通用聊天得出答案
 try:
     # 清除原来的聊天历史
     delete_all_records(source_id, user_state, name_space)
     query = f"{loader}\n{question}"
-    response_message = asyncio.run(chat_generic_langchain(source_id, query, user_state, name_space))
+    response_message = asyncio.run(chat_generic_langchain(bot_nick_name, user_nick_name, source_id, query, user_state, name_space))
 except Exception as e:
-    response_message = f"错误：{e}"
+    response_message = f"错误：{e}😊"
 
 
 # 打印答案，发送消息
@@ -255,17 +207,6 @@ print(f"答案： {response_message}")
 asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
 
 
-
-
-
-# # 在任务完成后等待一段时间，然后关闭窗口
-# time.sleep(4)  # 4 秒钟的等待时间，可以根据实际情况调整
-
-# # 根据不同的操作系统执行不同的关闭窗口命令
-# if sys.platform.startswith('win'):
-#     os.system('taskkill /f /im cmd.exe')  # 关闭 Windows 命令行窗口
-# elif sys.platform.startswith('linux') or sys.platform.startswith('darwin'):
-#     os.system('pkill -f Terminal')  # 关闭 Linux 或 macOS 终端窗口
 
 
 

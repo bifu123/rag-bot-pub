@@ -71,8 +71,8 @@ def create_tables(connection):
     cursor.execute('''CREATE TABLE IF NOT EXISTS history_now (
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         source_id TEXT NOT NULL,
-                        query TEXT NOT NULL,
-                        answer TEXT NOT NULL,
+                        user TEXT NOT NULL,
+                        content TEXT NOT NULL,
                         timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         user_state TEXT DEFAULT '聊天',
                         name_space TEXT
@@ -105,6 +105,13 @@ def create_tables(connection):
                     user_state TEXT,
                     receive_params_num INTEGER DEFAULT 0,
                     lock_state INTEGER DEFAULT 0)''')
+    # 创建模型表
+    cursor.execute('''CREATE TABLE IF NOT EXISTS models (
+                        embedding TEXT DEFAULT 'ollama',
+                        llm TEXT DEFAULT 'ollama',
+                        llm_rag TEXT DEFAULT 'ollama',
+                        must_use_llm_rag INTEGER DEFAULT 0
+                    )''')
  
     connection.commit()
     
@@ -146,6 +153,41 @@ def init_commands_table():
         conn.commit()
         print("命令表初始化完成")  
 
+
+# 初始化模型表
+def init_models_table(embedding, llm, llm_rag, must_use_llm_rag):
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+
+        # 尝试从数据库中获取模型记录
+        cursor.execute("SELECT * FROM models")
+        existing_model = cursor.fetchone()
+
+        if not existing_model:
+            # 如果记录不存在，则插入新记录
+            cursor.execute("INSERT INTO models (embedding, llm, llm_rag, must_use_llm_rag) VALUES (?, ?, ?, ?)", (embedding, llm, llm_rag, must_use_llm_rag))
+        print("模型表初始化完成")
+        conn.commit()
+        
+# 获取模型表
+def get_models_table():
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM models")
+        model = cursor.fetchone()
+        result = {"embedding": model[0], "llm": model[1], "llm_rag": model[2], "must_use_llm_rag": model[3]}
+        return result
+
+# 更新模型表
+def update_models_table(embedding, llm, llm_rag, must_use_llm_rag):
+    must_use_llm_rag = int(must_use_llm_rag)
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE models SET embedding = ?, llm = ?, llm_rag = ?, must_use_llm_rag = ?", (embedding, llm, llm_rag, must_use_llm_rag))
+        conn.commit()
 # 函数用于获取用户状态
 def get_user_state(user_id, source_id):
     with db_lock:
@@ -356,28 +398,45 @@ def get_path_by_source_id_site(source_id):
         else:
             return None
 
-def insert_chat_history(source_id, query, answer, user_state, name_space=""):
+def insert_chat_history(source_id, user, content, user_state, name_space=""):
     # 插入当前聊天历史记录
     with db_lock:
         conn = get_database_connection()
         cursor = conn.cursor()
-        cursor.execute("INSERT INTO history_now (source_id, query, answer, user_state, name_space) VALUES (?, ?, ?, ?, ?)", (source_id, query, answer, user_state, name_space))
+        cursor.execute("INSERT INTO history_now (source_id, user, content, user_state, name_space) VALUES (?, ?, ?, ?, ?)", (source_id, user, content, user_state, name_space))
         conn.commit()
-
-def insert_chat_history_xlsx(source_id, query, answer,user_state="聊天", name_space=""):
+# 写入与机器人聊天的记录
+def insert_chat_history_xlsx(source_id, user, content,user_state="聊天", name_space="test"):
     # 检查文件是否存在
-    filename = 'history_old.xlsx'
+    filename = 'chat_with_bot_history.xlsx'
     if not os.path.isfile(filename):
         # 如果文件不存在，创建新文件并写入表头
         wb = Workbook()
         ws = wb.active
-        ws.append(["source_iD", "query", "answer", "create_time", "user_state", "name_space"])
+        ws.append(["source_id", "user", "content", "create_time", "user_state", "name_space"])
         wb.save(filename)
 
     # 打开工作簿并插入新记录
     wb = load_workbook(filename)
     ws = wb.active
-    ws.append([source_id, query, answer, datetime.now(), user_state])
+    ws.append([source_id, user, content, datetime.now(), user_state, name_space])
+    wb.save(filename)
+    
+# 写入所有聊天的记录
+def insert_chat_history_all_xlsx(source_id, user, content, user_state="聊天", name_space="test"):
+    # 检查文件是否存在
+    filename = 'chat_all_history.xlsx'
+    if not os.path.isfile(filename):
+        # 如果文件不存在，创建新文件并写入表头
+        wb = Workbook()
+        ws = wb.active
+        ws.append(["source_id", "user", "content", "create_time", "user_state", "name_space"])
+        wb.save(filename)
+
+    # 打开工作簿并插入新记录
+    wb = load_workbook(filename)
+    ws = wb.active
+    ws.append([user, source_id, content,  datetime.now(), user_state, name_space])
     wb.save(filename)
 
 def delete_oldest_records(source_id, user_state, name_space=""):
@@ -412,31 +471,11 @@ def fetch_chat_history(source_id, user_state, name_space):
         conn = get_database_connection()
         cursor = conn.cursor()
         try:
-            cursor.execute("SELECT query, answer FROM history_now WHERE source_id = ? and user_state = ? and name_space = ? ORDER BY timestamp", (source_id, user_state, name_space))
+            cursor.execute("SELECT user, content FROM history_now WHERE source_id = ? and user_state = ? and name_space = ? ORDER BY timestamp", (source_id, user_state, name_space))
             return cursor.fetchall()
         except:
             return []
         
-# # 获得自定义命令列表
-# def get_custom_command_list():
-#     with db_lock:
-#         conn = get_database_connection()
-#         cursor = conn.cursor()
-#         rows = []
-#         try:
-#             cursor.execute("SELECT * FROM command_main")
-#             command_content = cursor.fetchall()
-#             if not command_content:
-#                 return [],[]
-#             else:
-#                 for row in command_content:
-#                     rows.append(row[1])
-#                 return rows, command_content
-
-#         except sqlite3.Error as e:
-#             print(f"Error checking custom command name: {e}")
-#             return [], []
-
 # 获得自定义命令内容
 def get_custom_command_name(command_name):
     with db_lock:

@@ -3,11 +3,9 @@ from send import *
 # 异步函数
 import asyncio
 import aiohttp
+import json
+import requests
 
-
-'''
-command_main: {'command_name': '/姓名', 'params_num': 2, 'params': [{'p1': {'keyword': '请输入你的姓', 'get_value': '', 're': ''}}, {'p2': {'keyword': '请输入你名字', 'get_value': '', 're': ''}}], 'command_code': "print(f'你的姓名是：{p1_value}{p2_value}')\nasyncio.run(answer_action(chat_type, user_id, group_id, at, f'你的姓名是：{p1_value}{p2_value}'))"}
-'''
 
 def do_custom_command(command_name, source_id, user_id, user_state, command_main, chat_type, group_id, at):
 
@@ -22,14 +20,14 @@ def do_custom_command(command_name, source_id, user_id, user_state, command_main
     print(q[3])
     
     # 发送消息
-    response_message = q[3]
+    response_message = q[3] + "😊"
     asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
     
     # 锁定用户
     switch_user_lock(user_id, source_id, user_state, 1)
 
 def update_custom_command(get_value, source_id, user_id, user_state, chat_type, group_id, at):
-    table_name = f"current_command_{user_id}_{source_id}"
+    table_name = f"current_command_{user_id}_{source_id}".replace("@","_")
     # 获取命令的参数数量
     sql = f'''SELECT params_num FROM command_main 
                WHERE command_name = (SELECT command_name FROM {table_name} 
@@ -73,7 +71,7 @@ def update_custom_command(get_value, source_id, user_id, user_state, chat_type, 
         print(f"keyword:{keyword}")
         
         if keyword is not None:
-            asyncio.run(answer_action(chat_type, user_id, group_id, at, keyword))
+            asyncio.run(answer_action(chat_type, user_id, group_id, at, keyword + "😊"))
         else:
             # 执行命令
             print("所有参数收集完成，执行命令")

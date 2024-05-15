@@ -96,39 +96,45 @@ llm_chatGLM = ChatGLM3(
 )
 
 ############################# 模型选择 #################################
-# 选择量化模型
-if model_choice["embedding"] == "ollama":
-    embedding = embedding_ollama
-else:
-    embedding = embedding_google
+# 读取数据库
+def get_models_on_request():
+    models = get_models_table()
+    must_use_llm_rag = models["must_use_llm_rag"]
+    # 选择量化模型
+    if models["embedding"] == "ollama":
+        embedding = embedding_ollama
+    else:
+        embedding = embedding_google
 
-# 选择聊天语言模型
-if model_choice["llm"] == "ollama":
-    llm = llm_ollama
-elif model_choice["llm"] == "gemini": 
-    llm = llm_gemini
-elif model_choice["llm"] == "tongyi": 
-    llm = llm_tongyi
-elif model_choice["llm"] == "kimi": 
-    llm = llm_kimi
-elif model_choice["llm"] == "groq": 
-    llm = llm_groq
-else:
-    llm = llm_chatGLM
+    # 选择聊天语言模型
+    if models["llm"] == "ollama":
+        llm = llm_ollama
+    elif models["llm"] == "gemini": 
+        llm = llm_gemini
+    elif models["llm"] == "tongyi": 
+        llm = llm_tongyi
+    elif models["llm"] == "kimi": 
+        llm = llm_kimi
+    elif models["llm"] == "groq": 
+        llm = llm_groq
+    else:
+        llm = llm_chatGLM
 
-# 选择知识库语言模型
-if model_choice["llm_rag"] == "ollama":
-    llm_rag = llm_ollama
-elif model_choice["llm_rag"] == "gemini": 
-    llm_rag = llm_gemini
-elif model_choice["llm_rag"] == "tongyi": 
-    llm_rag = llm_tongyi
-elif model_choice["llm_rag"] == "kimi": 
-    llm_rag = llm_kimi
-elif model_choice["llm_rag"] == "groq": 
-    llm_rag = llm_groq
-else:
-    llm_rag = llm_chatGLM
+    # 选择知识库语言模型
+    if models["llm_rag"] == "ollama":
+        llm_rag = llm_ollama
+    elif models["llm_rag"] == "gemini": 
+        llm_rag = llm_gemini
+    elif models["llm_rag"] == "tongyi": 
+        llm_rag = llm_tongyi
+    elif models["llm_rag"] == "kimi": 
+        llm_rag = llm_kimi
+    elif models["llm_rag"] == "groq": 
+        llm_rag = llm_groq
+    else:
+        llm_rag = llm_chatGLM
+        
+    return embedding, llm, llm_rag, must_use_llm_rag
 
 
 
@@ -144,149 +150,150 @@ async def chat_gemini(wxid, content, GMI_SERVER_URL):
         print("=" * 50, "\n",type(reply), reply)
         response_message = reply
     except Exception as e:
-        response_message = "LLM响应错误"
+        response_message = f"LLM响应错误: {e}"
     return response_message
 
-
-
-
-# 获取聊天记录
-def format_history(data):
-    formatted_data = ""
-    for entry in data:
-        formatted_data += f"query: {entry[0]}\n"
-        formatted_data += f"answer: {entry[1]}\n"
-    return formatted_data
+# 格式化聊天记录
+def format_history(bot_nick_name, history):
+    system_prompt = {"user": "system", "content": f"你好，我的名字叫{bot_nick_name}，我会尽力解答大家的问题."}
+    result = []
+    result.append(system_prompt)
+    for item in history:
+        result.append({"user": item[0], "content": item[1].replace(at_string, "")})
+    return result
 
 # 处理聊天记录
-async def do_chat_history(chat_history, source_id, query, answer, user_state, name_space):
+async def do_chat_history(chat_history, source_id, user, content, user_state, name_space):
     history_size_now = sys.getsizeof(f"{chat_history}")
     # 如果超过预定字节大小就放弃写入
     if not history_size_now > chat_history_size_set:
         # 插入当前数据表 source_id、query、result
-        insert_chat_history(source_id, query, answer, user_state, name_space)
+        insert_chat_history(source_id, user, content, user_state, name_space)
         # 将聊天记录入旧归档记录表history_old.xlsx表中
-        insert_chat_history_xlsx(source_id, query, answer, user_state)
+        insert_chat_history_xlsx(source_id, user, content, user_state, name_space)
     else:
         print("记录过大，放弃写入")
 
 # 向量检索聊天（执行向量链）
-async def run_chain(retriever, source_id, query, user_state="聊天", name_space="test"):
-    query = query.replace(f"{at_string} ", "")
-    print("=" * 50)
-    print("当前使用的知识库LLM：", llm_rag)
-    template_cn = """请根据上下文和对话历史记录用中文完整地回答问题 Please answer in Chinese:
-    {context}
-    {question}
-    """
-    
+async def run_chain(bot_nick_name, user_nick_name, retriever, source_id, query, user_state="聊天", name_space="test"):
+    embedding, llm, llm_rag, must_use_llm_rag = get_models_on_request()
+    if query !="" and query is not None:
+        print("=" * 50)
+        print("当前使用的知识库LLM：", llm_rag)
+        template_cn = """请根据上下文和对话历史记录用简体中文完整地回答问题 Please answer in Simplified Chinese:
+        {context}
+        {question}
+        """
+        
 
-    # 处理聊天记录
-    data = fetch_chat_history(source_id, user_state, name_space) # 从数据库中提取source_id的聊天记录
-    chat_history = format_history(data)
-    
-    history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}") # 如果超过预定字节大小，删除记录
-    print("=" * 50)
-    print(f"预计聊天记录大小：{history_size_now}\n聊天记录：\n{chat_history}")
-    
-    while history_size_now > chat_history_size_set:
-        if history_size_now > chat_history_size_set:
-            delete_oldest_records(source_id, user_state, name_space) # 删除数据库中时间最旧的1条记录
-            if chat_history:
-                data.pop(0) # 删除chat_history中时间最旧的1条记录
-                chat_history = format_history(data)
-                history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}")
-                print("历史记录及问题字节之和超过预定值，删除时间最旧的1条记录")
+        # 处理聊天记录
+        data = fetch_chat_history(source_id, user_state, name_space) # 从数据库中提取source_id的聊天记录
+        chat_history = format_history(bot_nick_name, data)
+        
+        history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}") # 如果超过预定字节大小，删除记录
+        print("=" * 50)
+        print(f"预计聊天记录大小：{history_size_now}\n聊天记录：\n{chat_history}")
+        
+        while history_size_now > chat_history_size_set:
+            if history_size_now > chat_history_size_set:
+                delete_oldest_records(source_id, user_state, name_space) # 删除数据库中时间最旧的1条记录
+                if chat_history:
+                    data.pop(0) # 删除chat_history中时间最旧的1条记录
+                    chat_history = format_history(bot_nick_name, data)
+                    history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}")
+                    print("历史记录及问题字节之和超过预定值，删除时间最旧的1条记录")
+                else:
+                    print("聊天记录为空，无需删除")
+                    break
             else:
-                print("聊天记录为空，无需删除")
-                break
-        else:
-            break  # 如果条件不再满足，则跳出循环
+                break  # 如果条件不再满足，则跳出循环
+            
+            
+        # 由模板生成prompt
+        prompt = ChatPromptTemplate.from_template(template_cn) 
         
+        # 创建chain
+        chain = RunnableMap({
+            "context": lambda x: retriever.get_relevant_documents(x["question"]),
+            "question": RunnablePassthrough(),
+            "chat_history": lambda x: chat_history  # 使用历史记录的步骤
+        }) | prompt | llm_rag | StrOutputParser()
         
-    # 由模板生成prompt
-    prompt = ChatPromptTemplate.from_template(template_cn) 
-    
-    # 创建chain
-    chain = RunnableMap({
-        "context": lambda x: retriever.get_relevant_documents(x["question"]),
-        "question": RunnablePassthrough(),
-        "chat_history": lambda x: chat_history  # 使用历史记录的步骤
-    }) | prompt | llm_rag | StrOutputParser()
-    
-    # 执行问答
-    request = {"question": query}
-    try:
-        response_message = chain.invoke(request)
-        # 处理聊天记录 
-        await do_chat_history(chat_history, source_id, query, response_message, user_state, name_space)
-    except Exception as e:
-        response_message = "LLM响应错误"
-        print(f"LLM响应错误: {e}")
-        
-    # 返回结果
-    return response_message
+        # 执行问答
+        request = f'{{"user":"{user_nick_name}", "content":"{query}"}}'
+        try:
+            response_message = chain.invoke(request)
+            # 处理聊天记录 
+            await do_chat_history(chat_history, source_id, user_nick_name, query, user_state, name_space)
+            await do_chat_history(chat_history, source_id, bot_nick_name, response_message, user_state, name_space)
+        except Exception as e:
+            response_message = f"LLM响应错误: {e}"
+            print(f"LLM响应错误: {e}")
+            
+        # 返回结果
+        return response_message + "😊"
 
 # 通用聊天
-async def chat_generic_langchain(source_id, query, user_state="聊天",name_space="test"):
-    query = query.replace(f"{at_string} ", "")
-    
-    
-    # 处理聊天记录
-    data = fetch_chat_history(source_id, user_state, name_space) # 从数据库中提取source_id的聊天记录
-    chat_history = format_history(data)
-    
-    history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}") # 如果超过预定字节大小，删除记录
-    print("=" * 50)
-    print(f"预计聊天记录大小：{history_size_now}\n聊天记录：\n{chat_history}")
-    
-    while history_size_now > chat_history_size_set:
-        if history_size_now > chat_history_size_set:
-            delete_oldest_records(source_id, user_state, name_space) # 删除数据库中时间最旧的1条记录
-            if chat_history:
-                data.pop(0) # 删除chat_history中时间最旧的1条记录
-                chat_history = format_history(data)
-                history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}")
-                print("历史记录及问题字节之和超过预定值，删除时间最旧的1条记录")
-            else:
-                print("聊天记录为空，无需删除")
-                break
-        else:
-            break  # 如果条件不再满足，则跳出循环
-
-  
-    # 由模板生成 prompt
-    prompt = ChatPromptTemplate.from_template("""
-        你是一个热心的人，尽力为人们解答问题，请用中文回答。Please answer in Chinese:
-        {chat_history}
-        {question}
-    """)
-    print("=" * 50)
-    
-    # 创建链，将历史记录传递给链
-    if user_state != "聊天" and must_use_llm_rag == True:
-        chain = {
-            "question": RunnablePassthrough(), 
-            "chat_history": lambda x: chat_history,
-        } | prompt | llm_rag | StrOutputParser()  
-        print("当前使用的聊天LLM：", llm_rag)
-    else:
-        chain = {
-            "question": RunnablePassthrough(), 
-            "chat_history": lambda x: chat_history,
-        } | prompt | llm | StrOutputParser()  
-        print("当前使用的聊天LLM：", llm)
-
-    # 调用链进行问答
-    try:
-        response_message = f"{chain.invoke(query)}"
-        # 处理聊天记录 
-        await do_chat_history(chat_history, source_id, query, response_message, user_state, name_space)
-    except Exception as e:
-        response_message = "LLM响应错误"
-        print(f"LLM响应错误: {e}")
+async def chat_generic_langchain(bot_nick_name, user_nick_name, source_id, query, user_state="聊天",name_space="test"):
+    embedding, llm, llm_rag, must_use_llm_rag = get_models_on_request()
+    if query !="" and query is not None:
+        # 处理聊天记录
+        data = fetch_chat_history(source_id, user_state, name_space) # 从数据库中提取source_id的聊天记录
+        chat_history = format_history(bot_nick_name, data)
         
-    return response_message
+        history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}") # 如果超过预定字节大小，删除记录
+        print("=" * 50)
+        print(f"预计聊天记录大小：{history_size_now}\n聊天记录：\n{chat_history}")
+        
+        while history_size_now > chat_history_size_set:
+            if history_size_now > chat_history_size_set:
+                delete_oldest_records(source_id, user_state, name_space) # 删除数据库中时间最旧的1条记录
+                if chat_history:
+                    data.pop(0) # 删除chat_history中时间最旧的1条记录
+                    chat_history = format_history(bot_nick_name, data)
+                    history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}")
+                    print("历史记录及问题字节之和超过预定值，删除时间最旧的1条记录")
+                else:
+                    print("聊天记录为空，无需删除")
+                    break
+            else:
+                break  # 如果条件不再满足，则跳出循环
+
+    
+        # 由模板生成 prompt
+        prompt = ChatPromptTemplate.from_template("""
+            你是一个热心的人，尽力为人们解答问题，请用简体中文回答。Please answer in Simplified Chinese:
+            {chat_history}
+            {question}
+        """)
+        print("=" * 50)
+        
+        # 创建链，将历史记录传递给链
+        if user_state != "聊天" and must_use_llm_rag == 1:
+            chain = {
+                "question": RunnablePassthrough(), 
+                "chat_history": lambda x: chat_history,
+            } | prompt | llm_rag | StrOutputParser()  
+            print("当前使用的聊天LLM：", llm_rag)
+        else:
+            chain = {
+                "question": RunnablePassthrough(), 
+                "chat_history": lambda x: chat_history,
+            } | prompt | llm | StrOutputParser()  
+            print("当前使用的聊天LLM：", llm)
+
+        # 执行问答
+        request = f'{{"user":"{user_nick_name}", "content":"{query}"}}'
+        try:
+            response_message = chain.invoke(request)
+            # 处理聊天记录 
+            await do_chat_history(chat_history, source_id, user_nick_name, query, user_state, name_space)
+            await do_chat_history(chat_history, source_id, bot_nick_name, response_message, user_state, name_space)
+        except Exception as e:
+            response_message = f"LLM响应错误: {e}"
+            print(f"LLM响应错误: {e}")
+            
+        return response_message + "😊"
 
 
 
