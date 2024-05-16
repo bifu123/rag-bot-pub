@@ -11,6 +11,13 @@ from sqlite_helper import *
 from langchain_community.embeddings import OllamaEmbeddings # 量化文档
 from langchain_community.llms import Ollama #模型
 
+# cohere重排模型
+# from langchain_community.retrievers import CohereRetriever
+
+from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
+from langchain_cohere import CohereRerank
+from langchain_community.llms import Cohere
+
 # 提示词模板
 from langchain_core.prompts import ChatPromptTemplate
 
@@ -49,6 +56,7 @@ os.environ['GOOGLE_API_KEY'] = GOOGLE_API_KEY
 os.environ['DASHSCOPE_API_KEY'] = DASHSCOPE_API_KEY
 os.environ["MOONSHOT_API_KEY"] = MOONSHOT_API_KEY
 os.environ["GROQ_API_KEY"] = GROQ_API_KEY
+os.environ["COHERE_API_KEY"] = COHERE_API_KEY
 ############################# 量化模型 #################################
 # 本地量化模型
 embedding_ollama = OllamaEmbeddings(
@@ -176,11 +184,21 @@ async def do_chat_history(chat_history, source_id, user, content, user_state, na
 
 # 向量检索聊天（执行向量链）
 async def run_chain(bot_nick_name, user_nick_name, retriever, source_id, query, user_state="聊天", name_space="test"):
+    # 是否使用重排模型
+    if must_rerank_embedding == 1:
+        # llm = Cohere(temperature=0)
+        # 对检索结果进行重排
+        compressor = CohereRerank() 
+        retriever = ContextualCompressionRetriever(
+            base_compressor = compressor, 
+            base_retriever = retriever # 未重排前的检索结果
+        )
+
     embedding, llm, llm_rag, must_use_llm_rag = get_models_on_request()
     if query !="" and query is not None:
         print("=" * 50)
         print("当前使用的知识库LLM：", llm_rag)
-        template_cn = """请根据上下文和对话历史记录用简体中文完整地回答问题 Please answer in Simplified Chinese:
+        template_cn = """请根据文档上下文用简体中文完整地回答问题:
         {context}
         {question}
         """

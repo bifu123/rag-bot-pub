@@ -42,12 +42,15 @@ db_path = "./chroma_db"
 
 
 # gemini api key 
-GOOGLE_API_KEY = "your GOOGLE_API_KEY GOOGLE_API_KEY" #gemini api key的申请地址：https://makersuite.google.com/app/prompts/new_freeform ，条件：拥有google帐号
+GOOGLE_API_KEY = "YOUR GOOGLE_API_KEY" #gemini api key的申请地址：https://makersuite.google.com/app/prompts/new_freeform ，条件：拥有google帐号
 # 通义千问 api key
-DASHSCOPE_API_KEY  = "your DASHSCOPE_API_KEY"
+DASHSCOPE_API_KEY  = "YOUR DASHSCOPE_API_KEY"
 # moonshot ai kimi api key
-MOONSHOT_API_KEY = "your MOONSHOT_API_KEY" # 在这里申请: https://platform.moonshot.cn/console/api-keys
-GROQ_API_KEY = "your GROQ_API_KEY" # 在这里申请: https://console.groq.com/keys
+MOONSHOT_API_KEY = "YOUR MOONSHOT_API_KEY" # 在这里申请: https://platform.moonshot.cn/console/api-keys
+# groq
+GROQ_API_KEY = "YOUR GROQ_API_KEY" # 在这里申请: https://console.groq.com/keys
+# cohere 重排模型 API KEY
+COHERE_API_KEY = "YOUR COHERE_API_KEY" # 申请地址：https://dashboard.cohere.com/api-keys
 
 
 
@@ -113,6 +116,9 @@ must_use_llm_rag = 0 # 0 | 1 # 当文档较大时，建议设置为0。因为在
 
 # 是否记录全部聊天记录
 write_all_history = 1 # 0 | 1 
+
+# 是否使用重排向量模型
+must_rerank_embedding = 1 # 0 | 1 
 
 
 
