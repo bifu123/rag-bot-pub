@@ -437,7 +437,7 @@ def insert_chat_history_all_xlsx(source_id, user, content, user_state="聊天", 
         # 打开工作簿并插入新记录
         wb = load_workbook(filename)
         ws = wb.active
-        ws.append([user, source_id, content,  datetime.now(), user_state, name_space])
+        ws.append([source_id, user, content,  datetime.now(), user_state, name_space])
         wb.save(filename)
         # print("insert_chat_history_all_xlsx写入记录")
     else:

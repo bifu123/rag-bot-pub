@@ -197,7 +197,7 @@ async def run_chain(bot_nick_name, user_nick_name, retriever, source_id, query, 
         while history_size_now > chat_history_size_set:
             if history_size_now > chat_history_size_set:
                 delete_oldest_records(source_id, user_state, name_space) # 删除数据库中时间最旧的1条记录
-                if chat_history:
+                if chat_history and len(chat_history) > 1:
                     data.pop(0) # 删除chat_history中时间最旧的1条记录
                     chat_history = format_history(bot_nick_name, data)
                     history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}")
@@ -248,7 +248,7 @@ async def chat_generic_langchain(bot_nick_name, user_nick_name, source_id, query
         while history_size_now > chat_history_size_set:
             if history_size_now > chat_history_size_set:
                 delete_oldest_records(source_id, user_state, name_space) # 删除数据库中时间最旧的1条记录
-                if chat_history:
+                if chat_history and len(chat_history) > 1:
                     data.pop(0) # 删除chat_history中时间最旧的1条记录
                     chat_history = format_history(bot_nick_name, data)
                     history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}")
