@@ -214,7 +214,7 @@ async def run_chain(bot_nick_name, user_nick_name, retriever, source_id, query, 
         
         # 创建chain
         chain = RunnableMap({
-            "context": lambda x: retriever.get_relevant_documents(x["question"]),
+            "context": lambda x: retriever.get_relevant_documents(x),
             "question": RunnablePassthrough(),
             "chat_history": lambda x: chat_history  # 使用历史记录的步骤
         }) | prompt | llm_rag | StrOutputParser()

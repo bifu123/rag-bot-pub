@@ -729,17 +729,17 @@ def event_action(data):
     
     # 获取当前群允许的聊天类型
     chat_type_allow = get_allow_state(data)
-    notice_info[chat_type_allow] = chat_type_allow
+    notice_info["chat_type_allow"] = chat_type_allow
 
     # 判断聊天类型、获得必要参数（函数在send.py中）
     chat_type = get_chat_type(data)["chatType"]
     at = get_chat_type(data)["at"]
     user_id = get_chat_type(data)["user_id"]
     group_id = get_chat_type(data)["group_id"]
-    notice_info[chat_type] = chat_type
-    notice_info[at] = at
-    notice_info[user_id] = user_id
-    notice_info[group_id] = group_id
+    notice_info["chat_type"] = chat_type
+    notice_info["at"] = at
+    notice_info["user_id"] = user_id
+    notice_info["group_id"] = group_id
      
     # 获取source_id
     if chat_type in ("group_at", "group"):
@@ -748,26 +748,25 @@ def event_action(data):
         source_id = user_id
     else:
         source_id = user_id
-    notice_info[source_id] = source_id
+    notice_info["source_id"] = source_id
 
     # 获取name_space
     name_space = get_user_name_space(user_id, source_id)
-    notice_info[name_space] = name_space
+    notice_info["name_space"] = name_space
     
     # 获取取用户状态
     user_state = get_user_state_from_db(user_id, source_id)
-    notice_info[user_state] = user_state
+    notice_info["user_state"] = user_state
     
     # 获取昵称
     bot_nick_name = get_nickname_by_user_id(bot_qq)
     user_nick_name = get_nickname_by_user_id(user_id)
-    notice_info[bot_nick_name] = bot_nick_name
-    notice_info[user_nick_name] = user_nick_name
+    notice_info["bot_nick_name"] = bot_nick_name
+    notice_info["user_nick_name"] = user_nick_name
     
     # 参数收集完毕，格式化输出                                                               
     formatted_json = json.dumps(notice_info, indent=4, ensure_ascii=False)
     print(formatted_json)
-    print("=" * 50)
     ###############################################################
     
     
