@@ -104,9 +104,9 @@ model_choice = {
     # 本地向量模型
     "embedding":"ollama", # embedding: ollama | google
     # 本地知识库模型
-    "llm_rag": "groq", # llm: ollama | gemini | tongyi | chatglm | kimi | groq 
+    "llm_rag": "ollama", # llm: ollama | gemini | tongyi | chatglm | kimi | groq 
     # 聊天模型
-    "llm": "groq", # llm: ollama | gemini | tongyi | chatglm | kimi | groq
+    "llm": "ollama", # llm: ollama | gemini | tongyi | chatglm | kimi | groq
 }
 
 
