@@ -7,26 +7,36 @@ import json
 import requests
 
 
-def do_custom_command(command_name, source_id, user_id, user_state, command_main, chat_type, group_id, at):
+def do_custom_command(command_name, source_id, user_id, user_state, command_main, chat_type, group_id, at, message_info={}):
 
     pamas_num = command_main["params_num"]
     command_code = command_main["command_code"]
+    if pamas_num > 0:
+        drop_current_command_table(command_name, user_id, source_id, user_state) # 删除表
+        copy_params_for_command(command_name, user_id, source_id, user_state) # 复制到当前用户命令表
+        
+        # 获得用户当前自定义命令
+        q = fetch_user_current_command(command_name, user_id, source_id, user_state)
+        print(q[3])
+        
+        # 发送消息
+        response_message = q[3] + "😊"
+        asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
+        
+        # 锁定用户
+        switch_user_lock(user_id, source_id, user_state, 1)
+    else:
+        # 执行命令
+        print(f"参数为个数为0，直接执行命令\n命令代码：{command_code}")  
+        print(f"message_info:\n{message_info}")
+        exec(command_code) 
+        # 解锁用户
+        switch_user_lock(user_id, source_id, user_state, 0)   
+        print(f"己解锁用户: {user_id}")
+    
 
-    drop_current_command_table(command_name, user_id, source_id, user_state) # 删除表
-    copy_params_for_command(command_name, user_id, source_id, user_state) # 复制到当前用户命令表
-    
-    # 获得用户当前自定义命令
-    q = fetch_user_current_command(command_name, user_id, source_id, user_state)
-    print(q[3])
-    
-    # 发送消息
-    response_message = q[3] + "😊"
-    asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
-    
-    # 锁定用户
-    switch_user_lock(user_id, source_id, user_state, 1)
 
-def update_custom_command(get_value, source_id, user_id, user_state, chat_type, group_id, at):
+def update_custom_command(get_value, source_id, user_id, user_state, chat_type, group_id, at, message_info={}):
     table_name = f"current_command_{user_id}_{source_id}".replace("@","_")
     # 获取命令的参数数量
     sql = f'''SELECT params_num FROM command_main 

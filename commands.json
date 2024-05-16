@@ -46,6 +46,12 @@
             {"p4": {"keyword":"是否强制非聊天状态时，一律使用本地知识库模型？(0 | 1)", "get_value": "", "re": ""}}
         ],
         "command_code": "try:\n    update_models_table('{p1_value}', '{p2_value}', '{p3_value}', {p4_value})\n    response = '模型己更新！😊'\nexcept Exception as e:\n    print(e)\n    response = f'模型己更新失败：{e}😊'\nasyncio.run(answer_action(chat_type, user_id, group_id, at, response))"
+    },
+    {
+        "command_name": "/info", 
+        "params_num": 0,
+        "params": [],
+        "command_code": "json_str = json.dumps(message_info, indent=4, ensure_ascii=False)\nasyncio.run(answer_action(chat_type, user_id, group_id, at, f'{json_str}😊'))"
     }
     
 ]
