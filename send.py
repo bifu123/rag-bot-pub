@@ -13,7 +13,7 @@ def get_nickname_by_user_id(user_id):
     for item in data["data"]:
         if str(item["user_id"]) == str(user_id):
             return str(item["nickname"])
-    return "nothing"
+    return f"QQ号为{user_id}的朋友"
 
 # 获取机器人昵称
 def get_nickname_by_bot_id(bot_id):
@@ -102,7 +102,9 @@ def get_chat_type(bot_id, data):
         "at": at,
         "at_string": at_string,
         "re_combine_message": re_combine_message,
-        "message": other_str
+        "message": other_str,
+        "user_nick_name": user_nick_name,
+        "bot_nick_name": bot_nick_name
         }
     return result
 
