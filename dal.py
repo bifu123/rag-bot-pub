@@ -118,7 +118,9 @@ def get_allow_state(data):
 # 匹配URL的函数
 def get_urls(text):
     # 定义一个正则表达式模式，用于匹配URL
-    url_pattern = r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+/\S*'
+    # url_pattern = r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+/\S*'
+    url_pattern = r'https?://(?:[-\w.]|(?:%[\da-fA-F]{2}))+[/\w\-%&?=.]*'
+
     # 使用findall函数查找文本中所有匹配的URL
     urls = re.findall(url_pattern, text)
     # 如果找到了URL，则返回True，否则返回False
