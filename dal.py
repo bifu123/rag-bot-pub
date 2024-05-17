@@ -270,14 +270,14 @@ def get_custom_commands_single(command_name, commands_json):
 
     return custom_commands_single
 
-# 获取昵称
-def get_nickname_by_user_id(user_id):
-    data = requests.get(http_url+"/get_friend_list").text
-    data = json.loads(data)
-    for item in data["data"]:
-        if str(item["user_id"]) == str(user_id):
-            return str(item["nickname"])
-    return "nothing"
+# # 获取昵称
+# def get_nickname_by_user_id(user_id):
+#     data = requests.get(http_url+"/get_friend_list").text
+#     data = json.loads(data)
+#     for item in data["data"]:
+#         if str(item["user_id"]) == str(user_id):
+#             return str(item["nickname"])
+#     return "nothing"
 
 # 获取机器人昵称
 def get_nickname_by_bot_id(bot_id):
@@ -312,7 +312,11 @@ def message_action(data):
     at = chat_type_data["at"] # 是否群中@
     user_id = chat_type_data["user_id"] # 获取user_id
     group_id = chat_type_data["group_id"] # 获取group_id
-    message = chat_type_data["message"] # 获取message
+    message = chat_type_data["message"] 
+    user_nick_name = chat_type_data["user_nick_name"]
+    bot_nick_name = chat_type_data["bot_nick_name"] 
+    
+    
     
     # 加入字返回消息字典
     message_info["at_string"] = at_string
@@ -322,13 +326,7 @@ def message_action(data):
     message_info["user_id"] = user_id
     message_info["group_id"] = group_id
     message_info["message"] = message
-
-    # 获取机器人昵称
-    bot_nick_name = get_nickname_by_bot_id(bot_id)
     message_info["bot_nick_name"] = bot_nick_name
-    
-    # 获取用户昵称
-    user_nick_name = get_nickname_by_user_id(user_id)
     message_info["user_nick_name"] = user_nick_name
     
     # 组装文件路径
@@ -409,7 +407,12 @@ def message_action(data):
     formatted_json = json.dumps(message_info, indent=4, ensure_ascii=False)
     print(formatted_json)
     #####################################################################
-
+ 
+    # 将聊天请求写入聊天历史记录
+    insert_chat_history(re_combine_message, source_id, user_nick_name, user_state, name_space)
+    # insert_chat_history("/清空记录", "415135222", "廉颇", "聊天", "test")
+    
+    # /清空记录 415135222 廉颇 聊天 test
 
     
     # 如果包含URL且不包含图片，则启动URL分析
@@ -436,7 +439,7 @@ def message_action(data):
             print(f"URL错误：{e}")
         response_message = ""
 
-
+     
     # 在允许回复的聊天类型中处理
     if chat_type in chat_type_allow and get_urls(message)[0] == "no": 
 
@@ -637,6 +640,7 @@ def message_action(data):
                     try:
                         user_state = get_user_state_from_db(user_id, source_id)
                         delete_all_records(source_id, user_state, name_space)
+                        insert_chat_history(re_combine_message, source_id, user_nick_name, user_state, name_space)
                         response_message = "消息已经清空"
                     except Exception as e:
                         response_message = f"消息清空失败：{e}"
@@ -712,8 +716,7 @@ def message_action(data):
         # 发送消息
         try: 
             asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
-            # 将聊天请求写入聊天历史记录
-            insert_chat_history(re_combine_message, source_id, user_nick_name, user_state, name_space)
+
             # 将聊天回复写入聊天历史记录
             if at == "yes":
                 response_message = "@" + user_nick_name + " " + response_message
@@ -721,6 +724,7 @@ def message_action(data):
             print("=" * 50, "\n",f"答案：{response_message}") 
         except Exception as e:
             print("=" * 50, "\n",f"发送消息错误：{e}")
+
             
 
 #**************** 事件处理 ********************************************
