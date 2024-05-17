@@ -17,11 +17,14 @@ import xml.dom.minidom
 import datetime
 from urllib import request
 from bs4 import BeautifulSoup
+
 # 解析站点地图
 import xml.etree.ElementTree as ET
+
 # 从文件导入
 from send import *
 from models_load import *
+# from dal import get_user_state_from_db
 
 # 异步函数
 import asyncio
@@ -190,14 +193,21 @@ name_space = get_user_name_space(user_id, source_id)
 
 
 
+# 将聊天请求写入记录
+if at == "yes":
+    query_insert = "@" + bot_nick_name + " " + question
+else:
+    query_insert = question
+insert_chat_history(query_insert, source_id, user_nick_name, user_state, name_space)
+
 # 调用通用聊天得出答案
 try:
     # 清除原来的聊天历史
-    delete_all_records(source_id, user_state, name_space)
+    # delete_all_records(source_id, user_state, name_space)
     query = f"{loader}\n{question}"
     response_message = asyncio.run(chat_generic_langchain(bot_nick_name, user_nick_name, source_id, query, user_state, name_space))
 except Exception as e:
-    response_message = f"错误：{e}😊"
+    response_message = f"错误：{e}"
 
 
 # 打印答案，发送消息
@@ -206,6 +216,18 @@ print(f"答案： {response_message}")
 # 发送消息
 asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
 
+    
+# # 获取user_state和name_space
+# name_space = get_user_name_space(user_id, source_id)
+# # from dal import get_user_state_from_db
+# user_state = get_user_state_from_db(user_id, source_id)
+
+# 将聊天回复写入聊天历史记录
+if at == "yes":
+    response_message_insert = "@" + user_nick_name + " " + response_message
+else:
+    response_message_insert = response_message
+insert_chat_history(response_message_insert, source_id, bot_nick_name, user_state, name_space)
 
 
 

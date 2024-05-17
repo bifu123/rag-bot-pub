@@ -1,69 +1,113 @@
 import aiohttp
 import asyncio
-from config import at_string, http_url, admin_qq, bot_qq, chat_type_allow
+from config import http_url, admin_id, bot_id, chat_type_allow, bot_at_string
+import re
+import requests
+import json
 
-# 判断聊天类型函数
-def get_chat_type(data):
 
-    '''
-    =============== Notice ===============
-    {'post_type': 'notice', 'notice_type': 'offline_file', 'time': 1711607647, 'self_id': 1878085037, 'user_id': 415135222, 'file': {'name': 'tesla_p40.pdf', 'size': 106509, 'url': 'http://39.145.24.22/ftn_handler/5ad5075ff13463bc2cc7a6b2c8f8621bd15efb11953c58279f7830ae738fdb359f3cf19371d2b137843433fa5a71584023888c1f822a7962714c6f80268ab792'}}
+# 获取昵称
+def get_nickname_by_user_id(user_id):
+    data = requests.get(http_url+"/get_friend_list").text
+    data = json.loads(data)
+    for item in data["data"]:
+        if str(item["user_id"]) == str(user_id):
+            return str(item["nickname"])
+    return "nothing"
 
-    =============== Notice ===============
-    {'post_type': 'notice', 'notice_type': 'group_upload', 'time': 1711608029, 'self_id': 1878085037, 'group_id': 499436648, 'user_id': 415135222, 'file': {'busid': 102, 'id': '/df9c709b-be79-4765-8d94-e1e1f2b13727', 'name': 'tesla_p40.pdf', 'size': 106509, 'url': 'http://223.109.208.144/ftn_handler/226e5a1946afd217ffcf5bee0f759dc6654d1dfc89512a268be65828a5aa23f7647bfbfb928a106f6d7de6321fd87743352758c00e9f518feb325812044651cf/?fname=2f64663963373039622d626537392d343736352d386439342d653165316632623133373237'}}
+# 获取机器人昵称
+def get_nickname_by_bot_id(bot_id):
+    data = requests.get(http_url+"/get_login_info").text
+    data = json.loads(data)["data"]["nickname"]
+    return str(data)
 
-    {'post_type': 'notice', 'notice_type': 'group_upload', 'time': 1712133142, 'self_id': 3787687088, 'group_id': 499436648, 'user_id': 415135222, 'file': {'busid': 102, 'id': '/b479c4f6-1e62-4a07-ba22-788589158251', 'name': '岳飞简介.txt', 'size': 1407, 'url': 'http://39.145.18.42/ftn_handler/68a27d5c9fc808f171b8537343553a0426d5213b5d57e01e1c60e9d4d845bc976febff7b6c65326845da715c8c359ba3639a38866a60db48fe77917315ab5cac/?fname=2f62343739633466362d316536322d346130372d626132322d373838353839313538323531'}}
 
-    =============== 批准入群 ==============
-    {'post_type': 'notice', 'notice_type': 'group_increase', 'time': 1711826628, 'self_id': 3152246598, 'sub_type': 'approve', 'group_id': 222302526, 'operator_id': 0, 'user_id': 990154420}
-    '''
+# 获取包含@昵称的消息
+def get_chat_type(bot_id, data):
     
     user_id = data["user_id"]
+    
+    user_nick_name = get_nickname_by_user_id(user_id)
+    bot_nick_name = get_nickname_by_bot_id(bot_id)
+    
+
 
     # 消息类型
     if data["post_type"] == "message":
-        if data["message_type"] == "private":
-            chatType = "private"
-            group_id = "no"
+        # 匹配@字符串
+        message = data["message"]
+        qq_num_pattern = r'\[CQ:at,qq=(\d+)\]' # 匹配[CQ:at,qq=123456]
+        qq_num_match = re.search(qq_num_pattern, message)
+        if qq_num_match:
+            match_id = qq_num_match.group(1)
+            if match_id == str(bot_id):
+                at_string = "@" + bot_nick_name + " "
+            else:
+                at_string = "@" + user_nick_name + " "
+            at = "yes"
+        else:
+            at_string = ""
             at = "no"
+        other_str = re.sub(qq_num_pattern, '', message).lstrip() # 除去@部分后的字符，再去除开头的空格
+        re_combine_message = at_string + other_str 
+        
+
+        if data["message_type"] == "private":
+            chat_type = "private"
+            group_id = "no"
+            source_id = user_id
         elif data["message_type"] == "group":
             group_id = data["group_id"]
-            if at_string in data["message"]:
-                chatType = "group_at"
-                at = "no"
+            source_id = group_id
+            if bot_at_string in data["message"]:
+                chat_type = "group_at"
             else:
-                chatType = "group"
-                at = "no"
+                chat_type = "group"
         else:
-            chatType = data["message_type"]
+            chat_type = data["message_type"]
             group_id = "no"
-            at = "no"
+            source_id = "no"
+            
+            
 
     # 事件类型
     if data["post_type"] == "notice":
         # 私发离线文件
         if data["notice_type"] == "offline_file":
-            chatType = "private"
+            chat_type = "private"
             group_id = "no"
             at = "no"
+            source_id = user_id
         # 群文件
         elif data["notice_type"] == "group_upload":
             group_id = data["group_id"]
-            chatType = "group_at"
+            chat_type = "group"
             at = "no"
+            source_id = user_id
         else:
-            chatType = data["notice_type"]
+            chat_type = data["notice_type"]
             group_id = "no"
             at = "no"
-
-    return {"chatType": chatType, "user_id": str(user_id), "group_id": str(group_id), "at": at}
+            source_id = "no"
+        at_string = ""  
+        re_combine_message = "" 
+        other_str = ""
+            
+            
+    result = {
+        "chat_type": chat_type, 
+        "user_id": str(user_id), 
+        "group_id": str(group_id), 
+        "source_id": str(source_id), 
+        "at": at,
+        "at_string": at_string,
+        "re_combine_message": re_combine_message,
+        "message": other_str
+        }
+    return result
 
 # 根据聊天类型发送消息的异步函数
 async def answer_action(chat_type, user_id, group_id, at, response_message):
-    '''
-    data : 监听到的用户发来的消息内容
-    response_message : 回复的消息内容
-    '''
     # 根据是私发/群中@来组装不同发送参数,避免群中接话
     if chat_type == "group_at": # 群中@
         url = http_url + "/send_group_msg"
@@ -88,7 +132,7 @@ async def answer_action(chat_type, user_id, group_id, at, response_message):
     else:
         url = http_url + "/send_private_msg"
         params = {
-            "user_id": admin_qq, 
+            "user_id": admin_id, 
             "message": f"{user_id} 发送了未知类型消息"
         } 
   

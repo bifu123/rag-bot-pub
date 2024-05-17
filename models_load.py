@@ -3,8 +3,10 @@ import sys
 import requests
 import json
 
+# 从文件导入
 from config import *
 from sqlite_helper import *
+from history import *
 
 
 # ollama模型
@@ -12,8 +14,6 @@ from langchain_community.embeddings import OllamaEmbeddings # 量化文档
 from langchain_community.llms import Ollama #模型
 
 # cohere重排模型
-# from langchain_community.retrievers import CohereRetriever
-
 from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
 from langchain_cohere import CohereRerank
 from langchain_community.llms import Cohere
@@ -161,26 +161,26 @@ async def chat_gemini(wxid, content, GMI_SERVER_URL):
         response_message = f"LLM响应错误: {e}"
     return response_message
 
-# 格式化聊天记录
-def format_history(bot_nick_name, history):
-    system_prompt = {"user": "system", "content": f"你好，我的名字叫{bot_nick_name}，我会尽力解答大家的问题."}
-    result = []
-    result.append(system_prompt)
-    for item in history:
-        result.append({"user": item[0], "content": item[1].replace(at_string, "")})
-    return result
+# # 格式化聊天记录
+# def format_history(bot_nick_name, history):
+#     system_prompt = {"user": "system", "content": f"你好，我的名字叫{bot_nick_name}，我会尽力解答大家的问题."}
+#     result = []
+#     result.append(system_prompt)
+#     for item in history:
+#         result.append({"user": item[0], "content": item[1].replace(at_string, "")})
+#     return result
 
-# 处理聊天记录
-async def do_chat_history(chat_history, source_id, user, content, user_state, name_space):
-    history_size_now = sys.getsizeof(f"{chat_history}")
-    # 如果超过预定字节大小就放弃写入
-    if not history_size_now > chat_history_size_set:
-        # 插入当前数据表 source_id、query、result
-        insert_chat_history(source_id, user, content, user_state, name_space)
-        # 将聊天记录入旧归档记录表history_old.xlsx表中
-        insert_chat_history_xlsx(source_id, user, content, user_state, name_space)
-    else:
-        print("记录过大，放弃写入")
+# # 处理聊天记录
+# async def do_chat_history(chat_history, source_id, user, content, user_state, name_space):
+#     history_size_now = sys.getsizeof(f"{chat_history}")
+#     # 如果超过预定字节大小就放弃写入
+#     if not history_size_now > chat_history_size_set:
+#         # 插入当前数据表 source_id、query、result
+#         insert_chat_history(source_id, user, content, user_state, name_space)
+#         # 将聊天记录入旧归档记录表history_old.xlsx表中
+#         insert_chat_history_xlsx(source_id, user, content, user_state, name_space)
+#     else:
+#         print("记录过大，放弃写入")
 
 # 向量检索聊天（执行向量链）
 async def run_chain(bot_nick_name, user_nick_name, retriever, source_id, query, user_state="聊天", name_space="test"):
@@ -204,27 +204,8 @@ async def run_chain(bot_nick_name, user_nick_name, retriever, source_id, query, 
         """
         
 
-        # 处理聊天记录
-        data = fetch_chat_history(source_id, user_state, name_space) # 从数据库中提取source_id的聊天记录
-        chat_history = format_history(bot_nick_name, data)
-        
-        history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}") # 如果超过预定字节大小，删除记录
-        print("=" * 50)
-        print(f"预计聊天记录大小：{history_size_now}\n聊天记录：\n{chat_history}")
-        
-        while history_size_now > chat_history_size_set:
-            if history_size_now > chat_history_size_set:
-                delete_oldest_records(source_id, user_state, name_space) # 删除数据库中时间最旧的1条记录
-                if chat_history and len(chat_history) > 1:
-                    data.pop(0) # 删除chat_history中时间最旧的1条记录
-                    chat_history = format_history(bot_nick_name, data)
-                    history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}")
-                    print("历史记录及问题字节之和超过预定值，删除时间最旧的1条记录")
-                else:
-                    print("聊天记录为空，无需删除")
-                    break
-            else:
-                break  # 如果条件不再满足，则跳出循环
+        # 获取聊天记录
+        chat_history = get_chat_history(bot_nick_name, query, source_id, user_state, name_space)
             
             
         # 由模板生成prompt
@@ -241,42 +222,23 @@ async def run_chain(bot_nick_name, user_nick_name, retriever, source_id, query, 
         request = f'{{"user":"{user_nick_name}", "content":"{query}"}}'
         try:
             response_message = chain.invoke(request)
-            # 处理聊天记录 
-            await do_chat_history(chat_history, source_id, user_nick_name, query, user_state, name_space)
-            await do_chat_history(chat_history, source_id, bot_nick_name, response_message, user_state, name_space)
+            # # 写入聊天记录
+            # await insert_chat_history(response_message, source_id, bot_nick_name, user_state, name_space)
         except Exception as e:
             response_message = f"LLM响应错误: {e}"
             print(f"LLM响应错误: {e}")
             
         # 返回结果
-        return response_message + "😊"
+        return response_message
 
 # 通用聊天
 async def chat_generic_langchain(bot_nick_name, user_nick_name, source_id, query, user_state="聊天",name_space="test"):
     embedding, llm, llm_rag, must_use_llm_rag = get_models_on_request()
     if query !="" and query is not None:
-        # 处理聊天记录
-        data = fetch_chat_history(source_id, user_state, name_space) # 从数据库中提取source_id的聊天记录
-        chat_history = format_history(bot_nick_name, data)
-        
-        history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}") # 如果超过预定字节大小，删除记录
-        print("=" * 50)
-        print(f"预计聊天记录大小：{history_size_now}\n聊天记录：\n{chat_history}")
-        
-        while history_size_now > chat_history_size_set:
-            if history_size_now > chat_history_size_set:
-                delete_oldest_records(source_id, user_state, name_space) # 删除数据库中时间最旧的1条记录
-                if chat_history and len(chat_history) > 1:
-                    data.pop(0) # 删除chat_history中时间最旧的1条记录
-                    chat_history = format_history(bot_nick_name, data)
-                    history_size_now = sys.getsizeof(f"{chat_history}") + sys.getsizeof(f"{query}")
-                    print("历史记录及问题字节之和超过预定值，删除时间最旧的1条记录")
-                else:
-                    print("聊天记录为空，无需删除")
-                    break
-            else:
-                break  # 如果条件不再满足，则跳出循环
 
+            
+        # 获取聊天记录
+        chat_history = get_chat_history(bot_nick_name, query, source_id, user_state, name_space)
     
         # 由模板生成 prompt
         prompt = ChatPromptTemplate.from_template("""
@@ -304,14 +266,14 @@ async def chat_generic_langchain(bot_nick_name, user_nick_name, source_id, query
         request = f'{{"user":"{user_nick_name}", "content":"{query}"}}'
         try:
             response_message = chain.invoke(request)
-            # 处理聊天记录 
-            await do_chat_history(chat_history, source_id, user_nick_name, query, user_state, name_space)
-            await do_chat_history(chat_history, source_id, bot_nick_name, response_message, user_state, name_space)
+            # # 处理聊天记录 
+            # await do_chat_history(chat_history, source_id, user_nick_name, query, user_state, name_space)
+            # await do_chat_history(chat_history, source_id, bot_nick_name, response_message, user_state, name_space)
         except Exception as e:
             response_message = f"LLM响应错误: {e}"
             print(f"LLM响应错误: {e}")
             
-        return response_message + "😊"
+        return response_message
 
 
 

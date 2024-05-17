@@ -22,6 +22,7 @@ from langchain_community.vectorstores import Chroma # 量化文档数据库
 from models_load import *
 from send import *
 from sqlite_helper import *
+from dal import get_user_state_from_db
 
 
 # 异步函数
@@ -219,7 +220,6 @@ def get_loads_from_dir(new_embedding_db_path):
 
 ####################### 执行过程
 # 确定量化存储路径
-# 删除旧向量存储文件夹
 if os.path.exists(embedding_db_path) and os.path.isdir(embedding_db_path):
     try:
         shutil.rmtree(embedding_db_path)
@@ -281,12 +281,17 @@ Chroma.from_documents(
 )
 
 # 构建消息内容
-response_message = f"量化执行结束，已迁移至新知识库：{new_embedding_db_path}😊"
+response_message = f"量化执行结束，已迁移至新知识库：{new_embedding_db_path}"
 
 # 发送消息
 asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
 
+# 获取user_state和name_space
+name_space = get_user_name_space(user_id, source_id)
+# from dal import get_user_state_from_db
+user_state = get_user_state_from_db(user_id, source_id)
 
-# time.sleep(1000000)
-# input("Press Enter to exit...")
-
+# 将聊天回复写入聊天历史记录
+if at == "yes":
+    response_message_insert = "@" + user_nick_name + " " + response_message
+insert_chat_history(response_message_insert, source_id, bot_nick_name, user_state, name_space)

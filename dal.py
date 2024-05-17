@@ -15,6 +15,7 @@ import subprocess
 from models_load import *
 from send import *
 from commands import *
+from history import insert_chat_history
 
 
 
@@ -284,6 +285,10 @@ def get_nickname_by_bot_id(bot_id):
     data = json.loads(data)["data"]["nickname"]
     return str(data)
 
+#**************** 函数定义完毕 ****************************************
+
+
+
 
 
 #**************** 消息处理 ********************************************
@@ -292,32 +297,34 @@ def message_action(data):
     print("=" * 50)
     message_info = {}
     
-    # 获取问题
-    message = data["message"]
-    message_info["message"] = message
-
+      
     # 获取当前群允许的聊天类型
     chat_type_allow = get_allow_state(data)
     message_info["chat_type_allow"] = chat_type_allow
     
-    # 获取聊天类型
-    chat_type = get_chat_type(data)["chatType"]
+    
+    # 执行send.py中函数，获取必要参数
+    chat_type_data = get_chat_type(bot_id, data)
+    # 解析参数
+    at_string = chat_type_data["at_string"] # @字符串
+    re_combine_message = chat_type_data["re_combine_message"] # 去除@字符串后的问题
+    chat_type = chat_type_data["chat_type"] # 聊天类型
+    at = chat_type_data["at"] # 是否群中@
+    user_id = chat_type_data["user_id"] # 获取user_id
+    group_id = chat_type_data["group_id"] # 获取group_id
+    message = chat_type_data["message"] # 获取message
+    
+    # 加入字返回消息字典
+    message_info["at_string"] = at_string
+    message_info["re_combine_message"] = re_combine_message
     message_info["chat_type"] = chat_type
-    
-    # 是否群中@
-    at = get_chat_type(data)["at"]
     message_info["at"] = at
-    
-    # 获取user_id
-    user_id = get_chat_type(data)["user_id"]
     message_info["user_id"] = user_id
-    
-    # 获取group_id
-    group_id = get_chat_type(data)["group_id"]
     message_info["group_id"] = group_id
+    message_info["message"] = message
 
     # 获取机器人昵称
-    bot_nick_name = get_nickname_by_bot_id(bot_qq)
+    bot_nick_name = get_nickname_by_bot_id(bot_id)
     message_info["bot_nick_name"] = bot_nick_name
     
     # 获取用户昵称
@@ -402,9 +409,8 @@ def message_action(data):
     formatted_json = json.dumps(message_info, indent=4, ensure_ascii=False)
     print(formatted_json)
     #####################################################################
-    
-    
-    
+
+
     
     # 如果包含URL且不包含图片，则启动URL分析
     if is_url[0] == "yes" and is_image[0] == False:
@@ -430,9 +436,6 @@ def message_action(data):
             print(f"URL错误：{e}")
         response_message = ""
 
-    # 写入聊天历史记录
-    if write_all_history == 1 and message != "":
-        insert_chat_history_all_xlsx(user_nick_name, source_id, message, user_state, name_space)
 
     # 在允许回复的聊天类型中处理
     if chat_type in chat_type_allow and get_urls(message)[0] == "no": 
@@ -453,9 +456,7 @@ def message_action(data):
                 response_message = f"已切换到 【{name_space_command}】 命名空间"
 
             # 其它命令和问答
-            else:
-                command_name = command_name.replace(at_string, "").replace(" ", "")
-                
+            else:            
                 # 命令： /我的文档 
                 if command_name in ("/我的文档", f"{at_string} /我的文档"):
                     print("命令匹配！")
@@ -704,17 +705,20 @@ def message_action(data):
 
                     # 聊天。
                     else:
-                        query = f'{data["message"].replace(at_string,"")}'
-                        response_message = asyncio.run(chat_generic_langchain(bot_nick_name, user_nick_name, source_id, query, user_state, name_space))
+                        print("=" * 50, "\n",f"问题：{message}")
+                        response_message = asyncio.run(chat_generic_langchain(bot_nick_name, user_nick_name, source_id, message, user_state, name_space))
             
                         
         # 发送消息
-        print("=" * 50, "\n",f"答案：{response_message}") 
         try: 
             asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
-            # 写入聊天历史记录
-            if write_all_history == 1 and response_message != "":
-                insert_chat_history_all_xlsx(bot_nick_name, source_id, response_message, user_state, name_space)
+            # 将聊天请求写入聊天历史记录
+            insert_chat_history(re_combine_message, source_id, user_nick_name, user_state, name_space)
+            # 将聊天回复写入聊天历史记录
+            if at == "yes":
+                response_message = "@" + user_nick_name + " " + response_message
+            insert_chat_history(response_message, source_id, bot_nick_name, user_state, name_space)
+            print("=" * 50, "\n",f"答案：{response_message}") 
         except Exception as e:
             print("=" * 50, "\n",f"发送消息错误：{e}")
             
@@ -722,6 +726,8 @@ def message_action(data):
 #**************** 事件处理 ********************************************
 def event_action(data):
     notice_info = {}
+    
+    
     
     # 判断事件类型
     notice_type = data["notice_type"]
@@ -732,22 +738,18 @@ def event_action(data):
     notice_info["chat_type_allow"] = chat_type_allow
 
     # 判断聊天类型、获得必要参数（函数在send.py中）
-    chat_type = get_chat_type(data)["chatType"]
-    at = get_chat_type(data)["at"]
-    user_id = get_chat_type(data)["user_id"]
-    group_id = get_chat_type(data)["group_id"]
+    chat_type_data = get_chat_type(bot_id, data)
+    
+    chat_type = chat_type_data["chat_type"]
+    at = chat_type_data["at"]
+    group_id = chat_type_data["group_id"]
+    source_id = chat_type_data["source_id"]
+    user_id = chat_type_data["user_id"]
+    
     notice_info["chat_type"] = chat_type
     notice_info["at"] = at
     notice_info["user_id"] = user_id
     notice_info["group_id"] = group_id
-     
-    # 获取source_id
-    if chat_type in ("group_at", "group"):
-        source_id = group_id
-    elif chat_type == "private":
-        source_id = user_id
-    else:
-        source_id = user_id
     notice_info["source_id"] = source_id
 
     # 获取name_space
@@ -759,7 +761,7 @@ def event_action(data):
     notice_info["user_state"] = user_state
     
     # 获取昵称
-    bot_nick_name = get_nickname_by_user_id(bot_qq)
+    bot_nick_name = get_nickname_by_user_id(bot_id)
     user_nick_name = get_nickname_by_user_id(user_id)
     notice_info["bot_nick_name"] = bot_nick_name
     notice_info["user_nick_name"] = user_nick_name
@@ -788,7 +790,7 @@ def event_action(data):
         if user_state not in ("文档问答","知识库问答"):
             file_path_temp = f"{user_data_path}_chat_temp_{user_id}"
             response_message = download_file(file_url, file_name, file_path_temp, allowed_extensions=allowed_extensions)
-            question = "请仔细阅读"
+            question = "请仔细阅读上面文档"
             
             # 判断操作系统类型
             if sys.platform.startswith('win'):
@@ -807,9 +809,9 @@ def event_action(data):
         # 当状态为插件问答
         if user_state == "插件问答":
             post_type =  data["post_type"]
-            query = get_response_from_plugins(name_space, post_type, user_state, data, source_id).replace(at_string,"")
-            if write_all_history == 1:
-                insert_chat_history_all_xlsx(user_nick_name, source_id, query, user_state, name_space)
+            query = get_response_from_plugins(name_space, post_type, user_state, data, source_id)
+            # 将聊天回复写入聊天历史记录
+            insert_chat_history(query, source_id, bot_nick_name, user_state, name_space)
             
             # 执行问答
             response_message = asyncio.run(chat_generic_langchain(bot_nick_name, user_nick_name, source_id, query, user_state, name_space))
@@ -818,8 +820,9 @@ def event_action(data):
     
     print("=" * 50)
     print(response_message)
-    if write_all_history == 1:
-        insert_chat_history_all_xlsx(user_nick_name, source_id, response_message, user_state, name_space)
+    
+    # 将聊天回复写入聊天历史记录
+    insert_chat_history(response_message, source_id, bot_nick_name, user_state, name_space)
 
     # 发送消息
     asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))

@@ -398,32 +398,15 @@ def get_path_by_source_id_site(source_id):
         else:
             return None
 
-def insert_chat_history(source_id, user, content, user_state, name_space=""):
+def insert_chat_history_to_db(source_id, user, content, user_state, name_space=""):
     # 插入当前聊天历史记录
     with db_lock:
         conn = get_database_connection()
         cursor = conn.cursor()
         cursor.execute("INSERT INTO history_now (source_id, user, content, user_state, name_space) VALUES (?, ?, ?, ?, ?)", (source_id, user, content, user_state, name_space))
         conn.commit()
-# 写入与机器人聊天的记录
-def insert_chat_history_xlsx(source_id, user, content,user_state="聊天", name_space="test"):
-    # 检查文件是否存在
-    filename = 'chat_with_bot_history.xlsx'
-    if not os.path.isfile(filename):
-        # 如果文件不存在，创建新文件并写入表头
-        wb = Workbook()
-        ws = wb.active
-        ws.append(["source_id", "user", "content", "create_time", "user_state", "name_space"])
-        wb.save(filename)
-
-    # 打开工作簿并插入新记录
-    wb = load_workbook(filename)
-    ws = wb.active
-    ws.append([source_id, user, content, datetime.now(), user_state, name_space])
-    wb.save(filename)
-    
 # 写入所有聊天的记录
-def insert_chat_history_all_xlsx(source_id, user, content, user_state="聊天", name_space="test"):
+def insert_chat_history_to_excel(source_id, user, content, user_state="聊天", name_space="test"):
     if content != "" and content is not None:
         # 检查文件是否存在
         filename = 'chat_all_history.xlsx'

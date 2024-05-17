@@ -1,7 +1,7 @@
 # 机器人 QQ 号
-bot_qq = "3152246598"
+bot_id = "3152246598"
 # 管理员 QQ 号
-admin_qq = "415135222"
+admin_id = "415135222"
 # 允许的聊天回复
 chat_type_allow = [
     "private",    # 私聊回复
@@ -10,7 +10,7 @@ chat_type_allow = [
     # "Unkown" ,  # 其它类型聊天也回复
     ]
 # 群中@特征字符
-at_string = f"[CQ:at,qq={bot_qq}]"
+bot_at_string = f"[CQ:at,qq={bot_id}]"
 # 允许上传的文件类型
 allowed_extensions = [
     ".doc",
@@ -67,7 +67,7 @@ embedding_google_conf = {
 ## 本地语言模型 
 llm_ollama_conf = {
     "base_url": "http://192.168.66.26:11434", 
-    "model": "llama3:8b" # qwen:7b | llama3:8b | llama3-chinese:8b 
+    "model": "llama3" # qwen:7b | llama3 | llama3-chinese:8b 
 }
 ## 线上google gemini语言模型
 llm_gemini_conf = {
@@ -104,18 +104,15 @@ model_choice = {
     # 本地向量模型
     "embedding":"ollama", # embedding: ollama | google
     # 本地知识库模型
-    "llm_rag": "ollama", # llm: ollama | gemini | tongyi | chatglm | kimi | groq 
+    "llm_rag": "groq", # llm: ollama | gemini | tongyi | chatglm | kimi | groq 
     # 聊天模型
-    "llm": "ollama", # llm: ollama | gemini | tongyi | chatglm | kimi | groq
+    "llm": "groq", # llm: ollama | gemini | tongyi | chatglm | kimi | groq
 }
 
 
 
 # 是否强制非聊天状态时，一律使用本地知识库模型
 must_use_llm_rag = 0 # 0 | 1 # 当文档较大时，建议设置为0。因为在线 API 模型在处理本地文档时Tocken大小有限制，二是考虑到费用问题，当然你可结合自身的需求和实际情况而定
-
-# 是否记录全部聊天记录
-write_all_history = 1 # 0 | 1 
 
 # 是否使用重排向量模型
 must_rerank_embedding = 1 # 0 | 1 
