@@ -2,6 +2,11 @@
 本脚本向您演示了一个并行模式 下的插件编写方式、脚本用几个函数分别收集了有关元龙居士的信息，最后交与LLM大模型综合推理
 '''
 
+import aiohttp
+import asyncio
+from models_load import *
+
+
 ################ 参数说明 #################
 # priority:  插件的优先级，数值越小，越优先执行
 # post_type: 来自onebot协议的类型
@@ -46,26 +51,26 @@ def fun_my_plugin(name_space, function_type, post_type, user_state, priority, ro
 
 ################# 子函数 ##################
 # 插件函数示例1
-@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=3, role=["21122263971@chatroom","cbf_415135222"])
+@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=3, role=["222302526","415135222"])
 def fun_1(data):
     msg = f"他今年45岁了"
     # 必须返回字符结果
     return msg
 
 # 插件函数示例2
-@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=4, role=["21122263971@chatroom","cbf_415135222"])
+@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=4, role=["222302526","415135222"])
 def fun_2(data):
     msg = f"元龙居士是一个养猪的人、他喜欢国学文化、创办了元龙山寨"
     return msg
 
 # 插件函数示例3
-@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=5, role=["21122263971@chatroom","cbf_415135222"])
+@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=5, role=["222302526","415135222"])
 def fun_3(data):
     msg = f"他居住的地方海拔1800米"
     return msg
 
 # 插件函数示例4
-@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=6, role=["21122263971@chatroom","cbf_415135222"], block=True)
+@fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=6, role=["222302526","415135222"], block=True)
 def fun_4(data):
     msg = f"他的头发是白的"
     return msg

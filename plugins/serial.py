@@ -1,6 +1,11 @@
+
+
 '''
 本脚本向您演示了一个 串行模式 下的插件编写方式、脚本用几个函数演示一个加法的步骤。并示例了如果block=True,后面的函数不再执行
 '''
+import aiohttp
+import asyncio
+from models_load import *
 
 ################ 参数说明 #################
 # priority:  插件的优先级，数值越小，越优先执行
@@ -46,21 +51,21 @@ def fun_add(name_space, function_type, post_type, user_state, priority, role=[],
 msg = 0
 
 # 子函数示例1
-@fun_add(name_space="test", function_type="serial", post_type="message", user_state="插件问答", priority=0, role=["21122263971@chatroom","cbf_415135222"])
+@fun_add(name_space="test", function_type="serial", post_type="message", user_state="插件问答", priority=0, role=["222302526","415135222"])
 def fun_add_1(data={}): # 第一个函数的参数必须为字典类型
     global msg
     msg = 10000
     return msg
 
 # 子函数示例2
-@fun_add(name_space="test", function_type="serial", post_type="message", user_state="插件问答", priority=1, role=["21122263971@chatroom","cbf_415135222"])
+@fun_add(name_space="test", function_type="serial", post_type="message", user_state="插件问答", priority=1, role=["222302526","415135222"])
 def fun_add_2(data):
     global msg
     msg += 1
     return msg
 
 # 子函数示例3
-@fun_add(name_space="test", function_type="serial", post_type="message", user_state="插件问答", priority=2, role=["21122263971@chatroom","cbf_415135222"], block=True)
+@fun_add(name_space="test", function_type="serial", post_type="message", user_state="插件问答", priority=2, role=["222302526","415135222"], block=True)
 def fun_add_3(data):
     global msg
     msg += 1

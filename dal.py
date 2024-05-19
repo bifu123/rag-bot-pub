@@ -209,7 +209,8 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data, sou
                         if result_serial is None:
                             # 如果result为None，则根据函数参数类型设定初始值
                             if 'dict' in str(function.__annotations__.values()):
-                                result_serial = {}
+                                # result_serial = {} # 这样无传值到插件
+                                result_serial = data
                             elif 'str' in str(function.__annotations__.values()):
                                 result_serial = ''
                             # 可以根据其他可能的参数类型继续添加条件
@@ -678,7 +679,7 @@ def message_action(data):
                     # 当状态为插件问答
                     elif user_state == "插件问答":
                         post_type =  data["post_type"]
-                        query = get_response_from_plugins(name_space, post_type, user_state, data, source_id).replace(at_string,"")
+                        query = get_response_from_plugins(name_space, post_type, user_state, message_info, source_id).replace(at_string,"")
                         # 执行问答
                         response_message = asyncio.run(chat_generic_langchain(bot_nick_name, user_nick_name, source_id, query, user_state, name_space))
 
@@ -815,7 +816,7 @@ def event_action(data):
         # 当状态为插件问答
         if user_state == "插件问答":
             post_type =  data["post_type"]
-            query = get_response_from_plugins(name_space, post_type, user_state, data, source_id)
+            query = get_response_from_plugins(name_space, post_type, user_state, notice_info, source_id)
             # 将聊天回复写入聊天历史记录
             insert_chat_history(query, source_id, bot_nick_name, user_state, name_space)
             
