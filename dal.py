@@ -805,7 +805,8 @@ def event_action(data):
             file_path_temp = f"{user_data_path}_chat_temp_{user_id}"
             response_message = download_file(file_url, file_name, file_path_temp, allowed_extensions=allowed_extensions)
             
-            question = "请仔细阅读上面文档"
+            # question = "请仔细阅读上面文档"
+            question = base64.b64encode(json.dumps("请仔细阅读上面文档").encode()).decode() 
             
             # 判断操作系统类型
             if sys.platform.startswith('win'):

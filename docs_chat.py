@@ -52,7 +52,7 @@ print(f"bot_nick_name:", bot_nick_name)
 print(f"user_nick_name:", user_nick_name)
 print("*" * 40)
 
-
+# time.sleep(100)
 
 # 文件夹加载器函数
 def load_documents(data_path):
