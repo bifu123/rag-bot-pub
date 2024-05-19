@@ -373,7 +373,7 @@ def message_action(data):
         embedding_db_path_site = get_path_by_source_id_site(source_id) # 如果存在则直接使用
     
     # source_id
-    message_info["source_id："] = source_id   
+    message_info["source_id"] = source_id   
     
     # embedding路径
     message_info["embedding_data_path"] = embedding_data_path 

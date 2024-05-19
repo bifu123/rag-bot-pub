@@ -6,6 +6,17 @@ import aiohttp
 import asyncio
 from models_load import *
 
+# LLM调用所需参数
+msg = 0 # 串行模式返回数值类型时需要
+bot_nick_name = ""
+user_nick_name = ""
+user_state = ""
+name_space = ""
+source_id = ""
+# LLM调用示例
+# response_message = asyncio.run(chat_generic_langchain(bot_nick_name, user_nick_name, source_id, message, user_state, name_space))
+
+
 
 ################ 参数说明 #################
 # priority:  插件的优先级，数值越小，越优先执行
@@ -53,6 +64,21 @@ def fun_my_plugin(name_space, function_type, post_type, user_state, priority, ro
 # 插件函数示例1
 @fun_my_plugin(name_space="test", function_type="parallel", post_type="message", user_state="插件问答", priority=3, role=["222302526","415135222"])
 def fun_1(data):
+    
+    global bot_nick_name
+    global user_nick_name
+    global user_state
+    global name_space
+    global source_id
+    
+    message = data["message"]
+    bot_nick_name = data["bot_nick_name"]
+    user_nick_name = data["user_nick_name"]
+    source_id = data["source_id"]
+    user_state = data["user_state"]
+    name_space = data["name_space"]
+    
+    
     msg = f"他今年45岁了"
     # 必须返回字符结果
     return msg

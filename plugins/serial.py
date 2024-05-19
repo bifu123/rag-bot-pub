@@ -7,6 +7,17 @@ import aiohttp
 import asyncio
 from models_load import *
 
+# LLM调用所需参数
+msg = 0 # 串行模式返回数值类型时需要
+bot_nick_name = ""
+user_nick_name = ""
+user_state = ""
+name_space = ""
+source_id = ""
+# LLM调用示例
+# response_message = asyncio.run(chat_generic_langchain(bot_nick_name, user_nick_name, source_id, message, user_state, name_space))
+
+
 ################ 参数说明 #################
 # priority:  插件的优先级，数值越小，越优先执行
 # post_type: 来自onebot协议的类型
@@ -47,13 +58,30 @@ def fun_add(name_space, function_type, post_type, user_state, priority, role=[],
         return func
     return decorator
 
-# 全局变量
+# 全局变量，仅当函数结果为数字时才需要
 msg = 0
 
 # 子函数示例1
 @fun_add(name_space="test", function_type="serial", post_type="message", user_state="插件问答", priority=0, role=["222302526","415135222"])
 def fun_add_1(data={}): # 第一个函数的参数必须为字典类型
+    
+    # 第一个子函数中获取全局变量，并将全局变量中保存数据，因为如果在本插件中调用LLM时用到
     global msg
+    global bot_nick_name
+    global user_nick_name
+    global user_state
+    global name_space
+    global source_id
+    
+    message = data["message"]
+    bot_nick_name = data["bot_nick_name"]
+    user_nick_name = data["user_nick_name"]
+    source_id = data["source_id"]
+    user_state = data["user_state"]
+    name_space = data["name_space"]
+
+    
+    
     msg = 10000
     return msg
 
