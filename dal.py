@@ -699,7 +699,7 @@ def message_action(data):
 
                     # 文档问答。文档未经过分割向量化，直接发给LLM推理
                     elif user_state == "文档问答":
-                        question = data["message"].replace(at_string, "")
+                        question = message
                         
                         if sys.platform.startswith('win'):
                         # Windows 上的命令
