@@ -207,12 +207,13 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data, sou
                 if function_type == "serial" and post_type == post_type_p and user_state == user_state_p and name_space == name_space_p:
                     if source_id in role or role == []:
                         if result_serial is None:
-                            # 如果result为None，则根据函数参数类型设定初始值
-                            if 'dict' in str(function.__annotations__.values()):
-                                # result_serial = {} # 这样无传值到插件
-                                result_serial = data
-                            elif 'str' in str(function.__annotations__.values()):
-                                result_serial = ''
+                            result_serial = data # 将data作为参数传递给函数
+                            # # 如果result为None，则根据函数参数类型设定初始值
+                            # if 'dict' in str(function.__annotations__.values()):
+                            #     # result_serial = {} # 这样无传值到插件
+                            #     result_serial = data
+                            # elif 'str' in str(function.__annotations__.values()):
+                            #     result_serial = ''
                             # 可以根据其他可能的参数类型继续添加条件
                         result_serial = function(data=result_serial)  # 将data作为参数传递给函数
                         # 如果block=True，则结束循环，不再执行后续函数

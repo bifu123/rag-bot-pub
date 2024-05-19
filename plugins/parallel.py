@@ -71,6 +71,7 @@ def fun_1(data):
     global name_space
     global source_id
     
+    # 从data中拿出发送推理所需参数（本插件非必须）
     message = data["message"]
     bot_nick_name = data["bot_nick_name"]
     user_nick_name = data["user_nick_name"]
@@ -78,9 +79,8 @@ def fun_1(data):
     user_state = data["user_state"]
     name_space = data["name_space"]
     
-    
-    msg = f"他今年45岁了"
     # 必须返回字符结果
+    msg = f"他今年45岁了"
     return msg
 
 # 插件函数示例2
