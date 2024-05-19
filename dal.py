@@ -241,7 +241,8 @@ def get_response_from_plugins(name_space_p, post_type_p, user_state_p, data, sou
         query = f"{result}" + f"\n{message}"
     else:
         # 准备问题（将从插件获取的结果与当前问题拼接成上下文供LLM推理)
-        query = f'请这样对我说："没有权限访问命名空间：{name_space_p}"，不要添加你的任何理解和推理'
+        query = """请输出：\n你没有权限访问命名空间：%s\n- 不要添加你的任何理解和推理\n- 不要添加任何其它的标点符号和空格\n- 不要添加""和''""" % name_space_p
+        
     # 输出结果
     print("=" * 50)
     print(f"插件请求结果：\n\n{query}\n")
