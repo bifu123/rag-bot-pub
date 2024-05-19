@@ -699,7 +699,7 @@ def message_action(data):
 
                     # 文档问答。文档未经过分割向量化，直接发给LLM推理
                     elif user_state == "文档问答":
-                        question = message
+                        question = base64.b64encode(json.dumps(re_combine_message).encode()).decode() 
                         
                         if sys.platform.startswith('win'):
                         # Windows 上的命令
@@ -804,6 +804,7 @@ def event_action(data):
         if user_state not in ("文档问答","知识库问答"):
             file_path_temp = f"{user_data_path}_chat_temp_{user_id}"
             response_message = download_file(file_url, file_name, file_path_temp, allowed_extensions=allowed_extensions)
+            
             question = "请仔细阅读上面文档"
             
             # 判断操作系统类型
