@@ -740,7 +740,7 @@ def event_action(data):
     
     # 判断事件类型
     notice_type = data["notice_type"]
-    notice_info[notice_type] = notice_type
+    notice_info["notice_type"] = notice_type
     
     # 获取当前群允许的聊天类型
     chat_type_allow = get_allow_state(data)
@@ -749,10 +749,15 @@ def event_action(data):
     # 判断聊天类型、获得必要参数（函数在send.py中）
     chat_type_data = get_chat_type(bot_id, data)
     
+    user_id = data["user_id"]
     chat_type = chat_type_data["chat_type"]
     at = chat_type_data["at"]
-    group_id = chat_type_data["group_id"]
-    source_id = chat_type_data["source_id"]
+    try:
+        group_id = data["group_id"]
+        source_id = group_id
+    except:
+        group_id = data["user_id"]
+        source_id = data["user_id"]
     user_id = chat_type_data["user_id"]
     
     notice_info["chat_type"] = chat_type
