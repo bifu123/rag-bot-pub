@@ -1,0 +1,57 @@
+[
+    {
+        "command_name": "/姓名", 
+        "params_num": 2,
+        "params": [
+            {"p1": {"keyword":"请输入你的姓", "get_value": "", "re": ""}},
+            {"p2": {"keyword":"请输入你名字", "get_value": "", "re": ""}}
+        ],
+        "command_code": "print(f'你的姓名是：{p1_value}{p2_value}')\nasyncio.run(answer_action(chat_type, user_id, group_id, at, f'你的姓名是：{p1_value}{p2_value}😊'))"
+    },
+    {
+        "command_name": "/加法",
+        "params_num": 2,
+        "params": [
+            {"p1": {"keyword": "请输入第一个加数", "get_value": "", "re": ""}},
+            {"p2": {"keyword": "请输入第二个加数", "get_value": "", "re": ""}}
+        ],
+        "command_code": "r = {p1_value} + {p2_value}\nprint(f'它们的和是：{r}')\nasyncio.run(answer_action(chat_type, user_id, group_id, at, f'它们的和是：{r}😊'))"
+    },
+    {
+        "command_name": "/邀请",
+        "params_num": 3,
+        "params": [
+            {"p1": {"keyword": "被邀请人的微信号？", "get_value": "", "re": ""}},
+            {"p2": {"keyword": "邀请他进入什么状态？", "get_value": "", "re": ""}},
+            {"p3": {"keyword": "邀请他进入的命名空间的名称？（如果不是进入插件命名空间，请输入 no）", "get_value": "", "re": ""}}
+        ],
+        "command_code": "tag_user_id = '{p1_value}'\ntag_state = '{p2_value}'\ntag_name_space = '{p3_value}'\n\nswitch_user_state(tag_user_id, source_id, tag_state)\n\n# 改变对方命名空间\nif tag_name_space != 'no':    \n    switch_user_name_space(tag_user_id, source_id, tag_name_space)\n    response_tag = f'【{user_id}】 邀请了你进入 状态： 【{tag_state}】 命名空间：【{tag_name_space}】'\nelse:\n    response_tag = f'【{user_id}】 邀请了你进入 状态： 【{tag_state}】'\n\nresponse_message =  '已邀请'\n# 给对方发送通知\ntry:\n    asyncio.run(answer_action(chat_type, tag_user_id, group_id, at, f'{response_tag}😊'))\nexcept:\n    pass"
+    },
+    {
+        "command_name": "/邀请群",
+        "params_num": 2,
+        "params": [
+            {"p1": {"keyword": "邀请进入什么状态？", "get_value": "", "re": ""}},
+            {"p2": {"keyword": "邀请他进入的命名空间的名称？（如果不是进入插件命名空间，请输入 no）", "get_value": "", "re": ""}}
+        ],
+        "command_code": "tag_state = '{p1_value}'\ntag_name_space = '{p2_value}'\njson_data = requests.get(f'{http_url}/api/chatroom?wxid={source_id}').text\njson_data = json.loads(json_data)\nuser_list = list(json_data['data'].keys())\nfor tag_user_id in user_list:\n    # 改变对方状态\n    switch_user_state(tag_user_id, source_id, tag_state)\n    # 改变对方命名空间\n    if tag_name_space != 'no':\n        switch_user_name_space(tag_user_id, source_id, tag_name_space)\nif tag_name_space != 'no':\n    response_tag = f'【{user_id}】 邀请了大家进入状态： 【{tag_state}】，命名空间：【{tag_name_space}】'\nelse:\n    response_tag = f'【{user_id}】 邀请大家进入状态：【{tag_state}】'\n# 发送通知\ntry:\n    asyncio.run(answer_action(chat_type, user_id, group_id, at, f'{response_tag}😊'))\nexcept:\n    pass"
+    },
+    {
+        "command_name": "/更换模型", 
+        "params_num": 4,
+        "params": [
+            {"p1": {"keyword":"embedding模型名称？( ollama | online )", "get_value": "", "re": ""}},
+            {"p2": {"keyword":"聊天模型名称？( ollama | tongyi | kimi | groq | gemini | deepseek )", "get_value": "", "re": ""}},
+            {"p3": {"keyword":"知识库RAG模型名称？( ollama | tongyi | kimi | groq | gemini | deepseek )", "get_value": "", "re": ""}},
+            {"p4": {"keyword":"是否强制非聊天状态时，一律使用本地知识库模型？( 0 | 1 )", "get_value": "", "re": ""}}
+        ],
+        "command_code": "try:\n    update_models_table('{p1_value}', '{p2_value}', '{p3_value}', {p4_value})\n    response = '模型己更新！😊'\nexcept Exception as e:\n    print(e)\n    response = f'模型己更新失败：{e}😊'\nasyncio.run(answer_action(chat_type, user_id, group_id, at, response))"
+    },
+    {
+        "command_name": "/info", 
+        "params_num": 0,
+        "params": [],
+        "command_code": "json_str = json.dumps(message_info, indent=4, ensure_ascii=False)\nasyncio.run(answer_action(chat_type, user_id, group_id, at, f'{json_str}😊'))"
+    }
+    
+]
