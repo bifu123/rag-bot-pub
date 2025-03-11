@@ -42,6 +42,7 @@ chat_history_size_set = 8192 # 记录越大，每次发给大模型分析的数�
 db_path = "./chroma_db"
 
 
+
 # 模型配置 
 ## 本地量化模型
 embedding_ollama_conf = {
@@ -55,7 +56,7 @@ embedding_google_conf = {
 ## 本地语言模型 
 llm_ollama_conf = {
     "base_url": "http://192.168.66.26:11434", 
-    "model": "qwen2:7b", # qwen2:7b | llama3 | llama3-chinese:8b | deepseek-r1
+    "model": "llama3:latest", # qwen2:7b | llama3:latest | llama3-chinese:8b | deepseek-r1
     "temperature": 0.8,
     "num_predict": 256
 }
@@ -115,7 +116,7 @@ model_choice = {
 must_use_llm_rag = 0 # 0 | 1 # 当文档较大时，建议设置为0。因为在线 API 模型在处理本地文档时Tocken大小有限制，二是考虑到费用问题，当然你可结合自身的需求和实际情况而定
 
 # 是否使用重排向量模型
-must_rerank_embedding = 1 # 0 | 1 
+must_rerank_embedding = 0 # 0 | 1 
 
 
 

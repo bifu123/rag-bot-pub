@@ -23,7 +23,9 @@ from history import insert_chat_history
 from langchain_community.document_loaders import DirectoryLoader, UnstructuredWordDocumentLoader, UnstructuredHTMLLoader, UnstructuredMarkdownLoader, PythonLoader 
 from langchain.indexes.vectorstore import VectorstoreIndexCreator
 from langchain.text_splitter import RecursiveCharacterTextSplitter # 分割文档
-from langchain_community.vectorstores import Chroma # 量化文档数据库
+# from langchain_community.vectorstores import Chroma # 量化文档数据库
+# 更新为
+from langchain_chroma import Chroma
 
 
 # 链结构

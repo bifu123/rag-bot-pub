@@ -13,8 +13,7 @@ from history import *
 # from langchain_community.embeddings import OllamaEmbeddings # 量化文档 # 旧版本已经弃用
 # from langchain_community.llms import Ollama #模型 # 旧版本已经弃用
 
-from langchain_ollama import OllamaEmbeddings
-from langchain_ollama import ChatOllama
+from langchain_ollama import OllamaEmbeddings, ChatOllama
 
 # cohere重排模型
 from langchain.retrievers.contextual_compression import ContextualCompressionRetriever
@@ -29,8 +28,11 @@ from langchain_google_genai import GoogleGenerativeAIEmbeddings
 from langchain_google_genai import ChatGoogleGenerativeAI
 
 # 通义千问模型
-from langchain_community.llms import Tongyi
-import dashscope
+# from langchain_community.llms import Tongyi
+# import dashscope
+# 更新
+from langchain_openai import ChatOpenAI
+
 
 # 语义检索
 from langchain.schema.runnable import RunnableMap
@@ -50,6 +52,10 @@ from langchain_groq import ChatGroq
 # deepseek 模型
 from langchain_deepseek import ChatDeepSeek # pip install -qU langchain-deepseek
 
+
+
+
+
 # 异步函数
 import asyncio
 
@@ -58,7 +64,7 @@ from dotenv import load_dotenv #pip install python-dotenv
 
 # 读取 .env 文件
 load_dotenv()
-
+# print(os.environ['DASHSCOPE_API_KEY'])
 
 ############################# API KEY #################################
 # 将各个在线模型 API key 加入环境变量
@@ -67,6 +73,7 @@ load_dotenv()
 # os.environ["MOONSHOT_API_KEY"] = MOONSHOT_API_KEY
 # os.environ["GROQ_API_KEY"] = GROQ_API_KEY
 # os.environ["COHERE_API_KEY"] = COHERE_API_KEY
+# os.environ["DEEPSEEK_API_KEY"] = DEEPSEEK_API_KEY
 
 
 ############################# 量化模型 #################################
@@ -75,6 +82,7 @@ embedding_ollama = OllamaEmbeddings(
     base_url = embedding_ollama_conf["base_url"], 
     model = embedding_ollama_conf["model"]
 ) 
+
 # 线上google量化模型
 embedding_google = GoogleGenerativeAIEmbeddings(
     model = embedding_google_conf["model"]
@@ -103,13 +111,25 @@ llm_gemini = ChatGoogleGenerativeAI(
     model = llm_gemini_conf["model"],
     temperature = llm_gemini_conf["temperature"]
 ) 
-# 在线语言模型 通义千问
-llm_tongyi = Tongyi(
-    model_name = llm_tongyi_conf["model_name"],
-    temperature = llm_tongyi_conf["temperature"],
-    streaming = llm_tongyi_conf["streaming"]
-    #enable_search = True
-) 
+
+
+
+# # 在线语言模型 通义千问
+# llm_tongyi = Tongyi(
+#     model_name = llm_tongyi_conf["model_name"],
+#     temperature = llm_tongyi_conf["temperature"],
+#     streaming = llm_tongyi_conf["streaming"]
+#     #enable_search = True
+# ) 
+# 更新
+llm_tongyi = ChatOpenAI(
+    api_key=os.getenv("DASHSCOPE_API_KEY"),
+    base_url="https://dashscope.aliyuncs.com/compatible-mode/v1",
+    model="qwen-plus",  # 此处以qwen-plus为例，您可按需更换模型名称。模型列表：https://help.aliyun.com/zh/model-studio/getting-started/models
+    # other params...
+)
+
+
 # 在线语言模型 kimi
 llm_kimi = Moonshot(
     model_name = llm_kimi_conf["model_name"],
@@ -252,7 +272,7 @@ async def run_chain(bot_nick_name, user_nick_name, retriever, source_id, query, 
         
         # 创建chain
         chain = RunnableMap({
-            "context": lambda x: retriever.get_relevant_documents(x),
+            "context": lambda x: retriever.invoke(x),
             "question": RunnablePassthrough(),
             "chat_history": lambda x: chat_history  # 使用历史记录的步骤
         }) | prompt | llm_rag | StrOutputParser()

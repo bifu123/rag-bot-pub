@@ -16,7 +16,7 @@ from langchain_community.document_loaders import SeleniumURLLoader # 多URL列�
 
 from langchain.indexes.vectorstore import VectorstoreIndexCreator
 from langchain.text_splitter import RecursiveCharacterTextSplitter # 分割文档
-from langchain_community.vectorstores import Chroma # 量化文档数据库
+from langchain_chroma import Chroma # 更新：量化文档数据库导入方式 pip install -U langchain_chroma
 
 # 从文件导入
 from models_load import *
@@ -274,12 +274,13 @@ all_splits = text_splitter.split_documents(loaders)
 
 # 保存向量
 print("正在保存向量...")
+
+
 Chroma.from_documents(
     documents =all_splits,
     embedding = embedding,
     persist_directory = new_embedding_db_path
 )
-
 # 构建消息内容
 response_message = f"量化执行结束，已迁移至新知识库：{new_embedding_db_path}"
 
@@ -294,4 +295,14 @@ user_state = get_user_state_from_db(user_id, source_id)
 # 将聊天回复写入聊天历史记录
 if at == "yes":
     response_message_insert = "@" + user_nick_name + " " + response_message
+else:
+    response_message_insert = response_message
+    
 insert_chat_history(response_message_insert, source_id, bot_nick_name, user_state, name_space)
+
+
+
+
+
+
+
