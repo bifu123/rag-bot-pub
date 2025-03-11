@@ -67,7 +67,7 @@ llm_gemini_conf = {
 } 
 ## 线上 通义千问 语言模型
 llm_tongyi_conf = {
-    "model_name": "qwen-plus", # qwen-max-longcontext | qwen-max |qwen-plus |roger/minicpm:latest
+    "model_name": "qwen-plus", # qwen-max-longcontext | qwen-max |qwen-plus |roger/minicpm:latest | deepseek-r1
     "temperature": 0.7,
     "streaming": False
 } 
