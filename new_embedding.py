@@ -213,7 +213,6 @@ def get_loads_from_dir(new_embedding_db_path):
     print("正在加载" + new_embedding_db_path + "下的所有文档...")
     loader = DirectoryLoader(new_embedding_db_path, show_progress=True, use_multithreading=True)
     loaders = loader.load()
-    print(loaders)
     return loaders
 
 
@@ -272,24 +271,22 @@ print("正在分割文档...")
 text_splitter = RecursiveCharacterTextSplitter(chunk_size=chunk_overlap, chunk_overlap=chunk_overlap)
 all_splits = text_splitter.split_documents(loaders)
 
+
 # 保存向量
 print("正在保存向量...")
-
-
 Chroma.from_documents(
     documents =all_splits,
     embedding = embedding,
     persist_directory = new_embedding_db_path
 )
-# 构建消息内容
-response_message = f"量化执行结束，已迁移至新知识库：{new_embedding_db_path}"
+
 
 # 发送消息
+response_message = f"量化执行结束，已迁移至新知识库：{new_embedding_db_path}" # 构建消息内容
 asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
 
 # 获取user_state和name_space
 name_space = get_user_name_space(user_id, source_id)
-# from dal import get_user_state_from_db
 user_state = get_user_state_from_db(user_id, source_id)
 
 # 将聊天回复写入聊天历史记录
