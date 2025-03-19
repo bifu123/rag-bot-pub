@@ -1,27 +1,26 @@
 # YLBot
 ## 简介
-YLBot是一个以QQ聊天界面作为语言模型与用户交互端的RAG应用。做这样一个应用，早有想法。从元龙山回来后，心神俱废，日渐消沉，需要拾起以前感兴趣的东西来调节自己，虽然年事己高，仍然觉得hello word是一个不错的东西。于是一直研究nonebot，可是弄了个来月，不得所以，于是明白：它经过高度封装后有了自己的一套，对于个人而言，学习它将付出更大的学习成本，于是决定自己写一个bot。现在这个bot有这些好处：一是它很方便地用QQ进行各种问答和控制操作，二是它借助了QQ强大的社交功能，使得它的推广和使用成本很低。三是支持群文档和个人文档，它在让个人可以用自己文档对话的同时，也让群就某一领域讨论与学习变得更加智能。
-## 免责申明
-本应用旨在研究语言模型交流及onebot标准，请勿用于违法犯罪活动，一切资源均来自网络，不提供任何破解服务。如需生产使用，请申请官方QQ机器人。
+YLBot是一个以QQ聊天界面作为语言模型与用户交互端的RAG应用。一是它很方便地用QQ进行各种问答和控制操作，二是它借助了QQ强大的社交功能，使得它的推广和使用成本很低。三是支持群文档和个人文档，它在让个人可以用自己文档对话的同时，也让群就某一领域讨论与学习变得更加智能。
 ## 部分界面载图
 ![上传群文档](images/上传群文档.png)
 ![后台量化](images/后台量化.png)
 ![量化成功及回答](images/量化成功及回答.png)
 ![切换聊天](images/切换聊天.png)
 ![我的文档命令](images/我的文档命令.png)
+
 ## 怎样使用
 ### [安装vs_BuildTools]https://aka.ms/vs/17/release/vs_BuildTools.exe
+
 ### 安装环境
 - windows可以使用conda环境安装部署，linux不建议用
 ```bash
 conda create -n rag-bot python=3.11
-git clone https://github.com/bifu123/rag-bot
+git clone https://github.com/bifu123/rag-bot-pub
 cd rag-bot
 conda activate rag-bot
 pip install requirements.txt
-# 如果安装 requirements.txt失败，或者安装后运行有问题，请尝试执行以下命令:
-pip install websocket-client bs4 dashscope langchain_google_genai langchain_community langchain openpyxl requests langchain_groq webdriver-manager selenium==4.9.0 python-docx "unstructured[xlsx]" unstructured[pdf] python-dotenv
 ```
+
 ### 创建环境变量
 当前目录下新建文件.env，内容如下：
 ```
@@ -73,46 +72,28 @@ python listen_ws.py
 | /我的命名空间 | 显示当前用户所处的插件命名空间 | 插件命名空间用于插件功能的隔离，精准定位到某个关键词下一个或多个插件                        |
 | /帮助 | 请切换至“插件问答”状态，再进入“help”命名空间 | 根据README.MD文件回答提问                       |
 
- 
- ## 重要更新
-  ### 2025-3-10
- - 增加了deepseek支持
- - 将 api key 存入在.env文件中
- - 升级了lanchain和库
- - 更正了ollama调用方式
- - 开源了本项目
- - 删除了“网站问答”这个状态
- - 编写了“帮助”插件
- ### 2025-2-13
- - 解决新消息类型guid带来的变量未赋值错误
-### 2024-4-30
- - 解决新开窗口运行后不会自动关闭的bug
-### 2024-4-29
- - 解决分步式命令bug
-### 2024-4-23
- - 增加了对ollama llama3的支持
- - 增加了对groq的支持
- - 增加分步式命令功能，比如：/邀请
- 注意：必须更新langchian、langchain_community到最新版，否则llama3会发送大量乱码字符。删除user.db，重新运行程序，因为数据表结构发生了改变。
-### 2024-4-13
- - ![增加插件支持](plugin.md)
- 插件分两种模式：串行和并行。串行模式是上一函数的结果是下一函数的参数，最后一个函数结果作为LLM上下文的一部分；并行模式是所有函数返回的结果一并交给LLM。
+### 状态
+- 聊天：与大模型直接对话
+- 文档问答：加载预置的文档，以文档内容来回复用户问题。
+- 知识库问答：当作为知识的文档较大，超出了大模型每次允许的大小，则需要在本地分片检索，进行词量化嵌入，就是RAG
+- 插件问答：这是机器的扩展功能，理论上只要python能实现的都能实现。
+比如，要切换到“文档问答”状态，可使用操控命令“/文档问答”。
+
+### 命名空间
+命名空间是不同功能下不同语料背景的逻辑划分，比如在“插件问答”状态下，有命名空间“固定资产管理”、“记事本”，它们或者连接了本地业务系统、或者加载了本地文档，除了默认的“test”命名空间外，其余的都在插件中实现。比如，要切换到一个名为“记事本”的命名空间，先发送命令“/插件问答”，再发送“：：记事本”（：不分全角半角）即进入了该命名空间。
+
+### 插件
+ - ![插件](plugin.md)
+ 插件是本机人最高级的应用，分两种模式：串行和并行。串行模式是上一函数的结果是下一函数的参数，最后一个函数结果作为LLM上下文的一部分；并行模式是所有函数返回的结果一并交给LLM。
  调用如：::test 。即执行所有name_space="test"的函数，而不会调用其它插件函数。
- - 更新状态bug
-请停止程序，删除user.db，重新运行程序，否则出错
+ - ![01-插件的实现原理](https://www.bilibili.com/video/BV14x4y1B7vd/)
+ - ![02-插件的属性](https://www.bilibili.com/video/BV18m411C7XM/)
+ - ![03-串行模式的插件](https://www.bilibili.com/video/BV14x4y1B7vd/)
+ - ![04-插件实例](https://www.bilibili.com/video/BV1FC411n7Hp/)
 
- ### 2024-4-10
- - 增加 moonshot ai kimi 模型 API 
+ ### 邀请
+ - ![邀请功能](https://www.bilibili.com/video/BV1Vw4m117SY/)
 
-### 2024-4-3
- - 发送文档后立即解读，并保持有该文档的记忆。
- - 使用异步函数调用，减少并发访问时的阻塞。
-
-### 2024-4-1
- - 默认使用通义千问长文本模型。
- - 增加问答历史记录记忆功能
-
- ### 2024-3-29 
- - 经过实验发现google的embedding模型embedding-001对中文支持确实存在不稳定的问题，从而导致LLM推理检索出错，推荐使用ollama的embedding
- - 将 /文档问答 命令改为 /知识库问答 。这种模式下，用户文档目录下的文档经过分割向量由 langchain交LLM推理。
- - 增加 /文档问答 功能。这种模式下，用户文档目录下的文档不经过分割向量直接发给LLM推理。
+### 分步式命令
+- ![【元龙机器人-分步式命令】](https://www.bilibili.com/video/BV1rx4y1B7Ez/?share_source=copy_web&vd_source=fea60feb13f21cb189693eed4a1f567e)
+ 
