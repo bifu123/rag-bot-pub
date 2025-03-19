@@ -46,17 +46,17 @@ db_path = "./chroma_db"
 # 模型配置 
 ## 本地量化模型
 embedding_ollama_conf = {
-    "base_url": "http://192.168.66.24:11434", 
-    "model": "nomic-embed-text" # nomic-embed-text | mofanke/dmeta-embedding-zh
+    "base_url": "http://192.168.66.26:11434", 
+    "model": "deepseek-r1" # nomic-embed-text | mofanke/dmeta-embedding-zh | deepseek-r1
 }
 ## goole量化模型
 embedding_google_conf = {
-    "model": "models/embedding-001"
+    "model": "models/embedding-001" 
 } 
 ## 本地语言模型 
 llm_ollama_conf = {
     "base_url": "http://192.168.66.26:11434", 
-    "model": "llama3:latest", # qwen2:7b | llama3:latest | llama3-chinese:8b | deepseek-r1
+    "model": "deepseek-r1", # qwen2:7b | llama3:latest | llama3-chinese:8b | deepseek-r1
     "temperature": 0.8,
     "num_predict": 256
 }
@@ -105,9 +105,9 @@ model_choice = {
     # 本地向量模型
     "embedding":"ollama", # embedding: ollama | google
     # 本地知识库模型
-    "llm_rag": "groq", # llm: ollama | gemini | tongyi | chatglm | kimi | groq | deepseek
+    "llm_rag": "tongyi", # llm: ollama | gemini | tongyi | chatglm | kimi | groq | deepseek
     # 聊天模型
-    "llm": "groq", # llm: ollama | gemini | tongyi | chatglm | kimi | groq | deepseek
+    "llm": "tongyi", # llm: ollama | gemini | tongyi | chatglm | kimi | groq | deepseek
 }
 
 
