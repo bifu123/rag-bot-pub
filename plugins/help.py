@@ -61,11 +61,9 @@ def fun_my_plugin(name_space, function_type, post_type, user_state, priority, ro
 
 
 
-
-
 ################# 子函数 ##################
 # 插件函数示例1
-@fun_my_plugin(name_space="help", function_type="parallel", post_type="message", user_state="插件问答", priority=3, role=[])
+@fun_my_plugin(name_space="帮助", function_type="parallel", post_type="message", user_state="插件问答", priority=3, role=[])
 def fun_1(data):
     
     global bot_nick_name
