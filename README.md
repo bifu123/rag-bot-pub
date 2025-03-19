@@ -1,6 +1,8 @@
 # YLBot
+
 ## 简介
 YLBot是一个以QQ聊天界面作为语言模型与用户交互端的RAG应用。一是它很方便地用QQ进行各种问答和控制操作，二是它借助了QQ强大的社交功能，使得它的推广和使用成本很低。三是支持群文档和个人文档，它在让个人可以用自己文档对话的同时，也让群就某一领域讨论与学习变得更加智能。
+
 ## 部分界面载图
 ![上传群文档](images/上传群文档.png)
 ![后台量化](images/后台量化.png)
@@ -10,6 +12,9 @@ YLBot是一个以QQ聊天界面作为语言模型与用户交互端的RAG应用�
 
 ## 怎样使用
 ### [安装vs_BuildTools]https://aka.ms/vs/17/release/vs_BuildTools.exe
+
+### 登陆go-cqhttp
+这部份内容请自补，在此不作赘述。
 
 ### 安装环境
 - windows可以使用conda环境安装部署，linux不建议用
@@ -24,7 +29,7 @@ pip install requirements.txt
 ### 创建环境变量
 当前目录下新建文件.env，内容如下：
 ```
-# deepseek api key 
+# 通义千问 api key 
 DEEPSEEK_API_KEY = "你的 deepseek api key" # 申请地址：https://platform.deepseek.com/
 # gemini api key 
 GOOGLE_API_KEY = "你的 gemini api key" # gemini api key 的申请地址：https://makersuite.google.com/app/prompts/new_freeform ，条件：拥有google帐号
@@ -75,7 +80,7 @@ python listen_ws.py
 ### 状态
 - 聊天：与大模型直接对话
 - 文档问答：加载预置的文档，以文档内容来回复用户问题。
-- 知识库问答：当作为知识的文档较大，超出了大模型每次允许的大小，则需要在本地分片检索，进行词量化嵌入，就是RAG
+- 知识库问答：当作为知识的文档较大，超出了大模型每次允许的大小，则需要在本地分片检索，进行词量化嵌入，就是RAG，分私聊状态下创建的私有知识库和在群中创建的群知识库两种。
 - 插件问答：这是机器的扩展功能，理论上只要python能实现的都能实现。
 比如，要切换到“文档问答”状态，可使用操控命令“/文档问答”。
 
@@ -92,8 +97,8 @@ python listen_ws.py
  - [04-插件实例](https://www.bilibili.com/video/BV1FC411n7Hp/)
 
  ### 邀请
- - ![邀请功能](https://www.bilibili.com/video/BV1Vw4m117SY/)
+ - [邀请功能](https://www.bilibili.com/video/BV1Vw4m117SY/)
 
 ### 分步式命令
-- ![【元龙机器人-分步式命令】](https://www.bilibili.com/video/BV1rx4y1B7Ez/?share_source=copy_web&vd_source=fea60feb13f21cb189693eed4a1f567e)
+- [分步式命令](https://www.bilibili.com/video/BV1rx4y1B7Ez/?share_source=copy_web&vd_source=fea60feb13f21cb189693eed4a1f567e)
  
