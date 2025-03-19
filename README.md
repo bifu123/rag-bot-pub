@@ -91,14 +91,17 @@ python listen_ws.py
  - [插件](plugin.md)
  插件是本机人最高级的应用，分两种模式：串行和并行。串行模式是上一函数的结果是下一函数的参数，最后一个函数结果作为LLM上下文的一部分；并行模式是所有函数返回的结果一并交给LLM。
  调用如：::test 。即执行所有name_space="test"的函数，而不会调用其它插件函数。
+ 插件视频教程：
  - [01-插件的实现原理](https://www.bilibili.com/video/BV1YH4y1P75r/)
  - [02-插件的属性](https://www.bilibili.com/video/BV18m411C7XM/)
  - [03-串行模式的插件](https://www.bilibili.com/video/BV14x4y1B7vd/)
  - [04-插件实例](https://www.bilibili.com/video/BV1FC411n7Hp/)
 
  ### 邀请
+ 邀请功能视频教程：
  - [邀请功能](https://www.bilibili.com/video/BV1Vw4m117SY/)
 
 ### 分步式命令
+ 分步式命令视频教程：
 - [分步式命令](https://www.bilibili.com/video/BV1rx4y1B7Ez/?share_source=copy_web&vd_source=fea60feb13f21cb189693eed4a1f567e)
  
