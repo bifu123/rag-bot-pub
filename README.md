@@ -80,16 +80,16 @@ python listen_ws.py
 比如，要切换到“文档问答”状态，可使用操控命令“/文档问答”。
 
 ### 命名空间
-命名空间是不同功能下不同语料背景的逻辑划分，比如在“插件问答”状态下，有命名空间“固定资产管理”、“记事本”，它们或者连接了本地业务系统、或者加载了本地文档，除了默认的“test”命名空间外，其余的都在插件中实现。比如，要切换到一个名为“记事本”的命名空间，先发送命令“/插件问答”，再发送“：：记事本”（：不分全角半角）即进入了该命名空间。
+命名空间是不同状态下不同语料背景的逻辑集合，比如在“插件问答”状态下，有命名空间“固定资产管理”、“记事本”，它们或者连接了本地业务系统、或者加载了本地文档，除了默认的“test”命名空间外，其余的都在插件中实现。比如，要切换到一个名为“记事本”的命名空间，先发送命令“/插件问答”，再发送“：：记事本”（：不分全角半角）即进入了该命名空间。
 
 ### 插件
- - ![插件](plugin.md)
+ - [插件](plugin.md)
  插件是本机人最高级的应用，分两种模式：串行和并行。串行模式是上一函数的结果是下一函数的参数，最后一个函数结果作为LLM上下文的一部分；并行模式是所有函数返回的结果一并交给LLM。
  调用如：::test 。即执行所有name_space="test"的函数，而不会调用其它插件函数。
- - ![01-插件的实现原理](https://www.bilibili.com/video/BV14x4y1B7vd/)
- - ![02-插件的属性](https://www.bilibili.com/video/BV18m411C7XM/)
- - ![03-串行模式的插件](https://www.bilibili.com/video/BV14x4y1B7vd/)
- - ![04-插件实例](https://www.bilibili.com/video/BV1FC411n7Hp/)
+ - [01-插件的实现原理](https://www.bilibili.com/video/BV1YH4y1P75r/)
+ - [02-插件的属性](https://www.bilibili.com/video/BV18m411C7XM/)
+ - [03-串行模式的插件](https://www.bilibili.com/video/BV14x4y1B7vd/)
+ - [04-插件实例](https://www.bilibili.com/video/BV1FC411n7Hp/)
 
  ### 邀请
  - ![邀请功能](https://www.bilibili.com/video/BV1Vw4m117SY/)
