@@ -24,7 +24,10 @@ allowed_extensions = [
     ".txt",
     ".htm",
     ".py",
-    ".xml"
+    ".xml",
+    ".png",
+    ".bmp",
+    ".jpg"
 ]
 # go-cqhttp Websocket 监听地址
 ws_url = "ws://192.168.66.29:25522"  # 根据go-cqhttp配置文件中的地址修改
