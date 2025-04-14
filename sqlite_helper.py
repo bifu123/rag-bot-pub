@@ -105,12 +105,19 @@ def create_tables(connection):
                     user_state TEXT,
                     receive_params_num INTEGER DEFAULT 0,
                     lock_state INTEGER DEFAULT 0)''')
+    
     # 创建模型表
     cursor.execute('''CREATE TABLE IF NOT EXISTS models (
                         embedding TEXT DEFAULT 'ollama',
                         llm TEXT DEFAULT 'ollama',
                         llm_rag TEXT DEFAULT 'ollama',
                         must_use_llm_rag INTEGER DEFAULT 0
+                    )''')
+    
+    # 创建同意加群表
+    cursor.execute('''CREATE TABLE IF NOT EXISTS approve (
+                        approve TEXT DEFAULT 'true',
+                        group_id TEXT
                     )''')
  
     connection.commit()
@@ -294,6 +301,7 @@ def get_user_name_space(user_id, source_id):
             return result[0]
         else:
             return "test"
+        
   
 # 函数用于切换用户插件命名空间
 def switch_user_name_space(user_id, source_id, name_space):
@@ -315,6 +323,45 @@ def switch_user_name_space(user_id, source_id, name_space):
             # 如果不存在，则插入新记录
             cursor.execute('''INSERT INTO user_name_space (user_id, source_id, name_space)
                               VALUES (?, ?, ?)''', (user_id, source_id, name_space))
+        
+        conn.commit()
+
+
+# 函数用于获取加群是否自动同意
+def get_group_approve(group_id:str):
+    group_id = str(group_id)
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT approve FROM approve WHERE group_id = '{group_id}'")
+        result = cursor.fetchone()
+        if result:
+            return result[0]
+        else:
+            return "true"
+        
+# 函数用于切换加群是否自动同意
+def switch_group_approve(group_id:str, approve:str):
+    group_id = str(group_id)
+    with db_lock:
+        conn = get_database_connection()
+        cursor = conn.cursor()
+        
+        # 首先检查是否已存在
+        cursor.execute(f"SELECT approve FROM approve WHERE group_id = '{group_id}'")
+        existing_record = cursor.fetchone()
+        
+        if existing_record:
+            print(f"* 存在群号为{group_id}的记录:{existing_record}")
+            # 如果存在，则更新
+            cursor.execute(f"""UPDATE approve 
+                              SET approve = {approve}
+                              WHERE group_id = '{group_id}'""")
+        else:
+            print(f"! 不存在群号为{group_id}的记录")
+            # 如果不存在，则插入
+            cursor.execute(f"""INSERT INTO approve (approve, group_id)
+                              VALUES ({approve}, '{group_id}')""")
         
         conn.commit()
 

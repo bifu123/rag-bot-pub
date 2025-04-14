@@ -52,6 +52,13 @@
         "params_num": 0,
         "params": [],
         "command_code": "json_str = json.dumps(message_info, indent=4, ensure_ascii=False)\nasyncio.run(answer_action(chat_type, user_id, group_id, at, f'{json_str}😊'))"
+    },
+    {
+        "command_name": "/自动批准入群", 
+        "params_num": 1,
+        "params": [
+            {"p1": {"keyword":"是否自动批准入群？( true | false )", "get_value": "", "re": ""}}
+        ],
+        "command_code": "try:\n    switch_group_approve(group_id, '{p1_value}')\n    response = '处理完成！😊'\nexcept Exception as e:\n    print(e)\n    response = f'处理失败：{e}😊'\nasyncio.run(answer_action(chat_type, user_id, group_id, at, response))"
     }
-    
 ]

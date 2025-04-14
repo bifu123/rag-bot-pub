@@ -834,6 +834,13 @@ def event_action(data):
         else:
             response_message = download_file(file_url, file_name, user_data_path, allowed_extensions=allowed_extensions)
 
+    # 加入群发送欢迎
+    elif notice_type in ("group_increase"):
+        # 发送消息
+        response_message = "你好，欢迎加入，我会根据本群已有的讨论、研究成果、文档暂时回复你的问题，请提问"
+
+
+
     # 如果不包含文件的提醒
     else:
         # 当状态为插件问答
@@ -856,4 +863,59 @@ def event_action(data):
 
     # 发送消息
     asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
+
+
+
+#**************** 请求处理 ********************************************
+async def request_action(data):
+
+    response_message = "你好，欢迎加入，我会根据本群已有的讨论、研究成果、文档先回复你的问题，请提问[CQ:face,id=78]"
+    print(response_message)
+
+    source_id = data["group_id"]
+    user_id = data["user_id"]
+    bot_id = data["self_id"]
+    bot_nick_name = get_nickname_by_user_id(bot_id)
+    user_nick_name = get_nickname_by_user_id(user_id)
+    name_space = get_user_name_space(user_id, source_id)
+    user_state = get_user_state_from_db(user_id, source_id)
+    group_id = data["group_id"]
+    # try:
+    #     chat_type_data = get_chat_type(bot_id, data)
+    #     chat_type = chat_type_data["chat_type"]
+    # except Exception as e:
+    #     print(f"执行chat_type_data出错：{e}")
+    #     chat_type = "group_at"
+    # at = chat_type_data["at"]
     
+
+    # 处理加群事件
+    if data["request_type"] == "group" and data["sub_type"] == "add":
+        if get_group_approve(group_id) == '1':
+            # 读取数据库本群是否自动同意加群
+            chat_type = "group_at"
+            at = "yes"
+
+            # 自动同意入群
+            url = http_url + "/set_group_add_request"
+            params = {
+                "flag": data["flag"], 
+                "sub_type": data["sub_type"],
+                "approve": get_group_approve(data["group_id"]),
+                "reason": ""
+            } 
+
+            async with aiohttp.ClientSession() as session:
+                async with session.post(url, params=params) as response:
+                    # 检查响应状态码
+                    if response.status == 200:
+                        print("=" * 50, "\n处理加群请求成功\n\n")
+                    else:
+                        print("=" * 50, "\n处理加群请求出错:\n\n", await response.text())
+
+                
+            # 将聊天回复写入聊天历史记录
+            insert_chat_history(response_message, source_id, bot_nick_name, user_state, name_space)
+
+            # 发送消息
+            asyncio.run(answer_action(chat_type, user_id, group_id, at, response_message))
